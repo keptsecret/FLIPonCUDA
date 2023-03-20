@@ -53,16 +53,15 @@ class Point3;
 template <typename T>
 class Point2;
 
-template <typename T>
-class Normal3;
-
 using Point2f = Point2<float>;
 using Point2i = Point2<int>;
 using Point3f = Point3<float>;
 using Vector2f = Vector2<float>;
 using Vector2i = Vector2<int>;
 using Vector3f = Vector3<float>;
-using Normal3f = Normal3<float>;
+
+template <typename T>
+class Array3D;
 
 } // namespace foc
 

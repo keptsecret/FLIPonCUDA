@@ -496,125 +496,6 @@ public:
 	T x, y;
 };
 
-/* -------------------------------------------------------------------------------
- * Normal
- */
-
-template <typename T>
-class Normal3 {
-public:
-	Normal3<T>() :
-			x(0), y(0), z(0) {}
-
-	FOC_CPU_GPU
-	Normal3<T>(T _x, T _y, T _z) :
-			x(_x), y(_y), z(_z) {
-	}
-
-	FOC_CPU_GPU
-	explicit Normal3<T>(const Vector3<T>& v) :
-			x(v.x), y(v.y), z(v.z) {
-	}
-
-	FOC_CPU_GPU
-	Normal3<T> operator+(const Normal3<T>& n) const {
-		return Normal3<T>(x + n.x, y + n.y, z + n.z);
-	}
-
-	FOC_CPU_GPU
-	Normal3<T>& operator+=(const Normal3<T>& n) {
-		x += n.x;
-		y += n.y;
-		z += n.z;
-		return *this;
-	}
-
-	FOC_CPU_GPU
-	Normal3<T> operator-(const Normal3<T>& n) const {
-		return Normal3<T>(x - n.x, y - n.y, z - n.z);
-	}
-
-	FOC_CPU_GPU
-	Normal3<T> operator-() const { return Normal3(-x, -y, -z); }
-
-	FOC_CPU_GPU
-	Normal3<T>& operator-=(const Normal3<T>& n) {
-		x -= n.x;
-		y -= n.y;
-		z -= n.z;
-		return *this;
-	}
-
-	template <typename U>
-	FOC_CPU_GPU Normal3<T> operator*(U f) const {
-		return Normal3<T>(f * x, f * y, f * z);
-	}
-
-	template <typename U>
-	FOC_CPU_GPU Normal3<T>& operator*=(U f) {
-		x *= f;
-		y *= f;
-		z *= f;
-		return *this;
-	}
-
-	template <typename U>
-	FOC_CPU_GPU Normal3<T> operator/(U f) const {
-		float inv = 1.0f / f;
-		return Normal3<T>(x * inv, y * inv, z * inv);
-	}
-
-	template <typename U>
-	FOC_CPU_GPU Normal3<T>& operator/=(U f) {
-		CHECK_NE(f, 0);
-		float inv = 1.0f / f;
-		x *= inv;
-		y *= inv;
-		z *= inv;
-		return *this;
-	}
-
-	FOC_CPU_GPU
-	bool operator==(const Normal3<T>& n) const {
-		return x == n.x && y == n.y && z == n.z;
-	}
-
-	FOC_CPU_GPU
-	bool operator!=(const Normal3<T>& n) const {
-		return x != n.x || y != n.y || z != n.z;
-	}
-
-	FOC_CPU_GPU
-	T operator[](int i) const {
-		if (i == 0) {
-			return x;
-		}
-		if (i == 1) {
-			return y;
-		}
-		return z;
-	}
-
-	FOC_CPU_GPU
-	T& operator[](int i) {
-		if (i == 0) {
-			return x;
-		}
-		if (i == 1) {
-			return y;
-		}
-		return z;
-	}
-
-	FOC_CPU_GPU
-	float lengthSquared() const { return x * x + y * y + z * z; }
-
-	FOC_CPU_GPU
-	float length() const { return std::sqrt(lengthSquared()); }
-
-	T x, y, z;
-};
-
 /*---------------------------------------------------------------------------------*/
 /*
  * Inline geometry functions
@@ -669,11 +550,6 @@ FOC_CPU_GPU Vector3<T>::Vector3(const Point3<T>& p) :
 }
 
 template <typename T>
-FOC_CPU_GPU Vector3<T>::Vector3(const Normal3<T>& n) :
-		x(n.x), y(n.y), z(n.z) {
-}
-
-template <typename T>
 FOC_CPU_GPU inline Vector3<T> operator*(T s, const Vector3<T>& v) {
 	return v * s;
 }
@@ -700,22 +576,6 @@ FOC_CPU_GPU inline Vector3<T> cross(const Vector3<T>& v1, const Vector3<T>& v2) 
 	return Vector3<T>(v1y * v2z - v1z * v2y,
 			v1z * v2x - v1x * v2z,
 			v1x * v2y - v1y * v2z);
-}
-
-template <typename T>
-FOC_CPU_GPU inline Vector3<T> cross(const Vector3<T>& v, const Normal3<T>& n) {
-	double v1x = v.x, v1y = v.y, v1z = v.z;
-	double v2x = n.x, v2y = n.y, v2z = n.z;
-	return Vector3<T>((v1y * v2z) - (v1z * v2y), (v1z * v2x) - (v1x * v2z),
-			(v1x * v2y) - (v1y * v2x));
-}
-
-template <typename T>
-FOC_CPU_GPU inline Vector3<T> cross(const Normal3<T>& n, const Vector3<T>& v) {
-	double v1x = n.x, v1y = n.y, v1z = n.z;
-	double v2x = v.x, v2y = v.y, v2z = v.z;
-	return Vector3<T>((v1y * v2z) - (v1z * v2y), (v1z * v2x) - (v1x * v2z),
-			(v1x * v2y) - (v1y * v2x));
 }
 
 template <typename T>
@@ -874,78 +734,6 @@ FOC_CPU_GPU inline Point3<T> permute(const Point3<T>& p, int x, int y, int z) {
 
 template <typename T>
 FOC_CPU_GPU inline std::ostream& operator<<(std::ostream& os, const Point3<T>& v) {
-	os << "[ " << v.x << ", " << v.y << ", " << v.z << " ]";
-	return os;
-}
-
-// Normal
-template <typename T, typename U>
-FOC_CPU_GPU inline Normal3<T> operator*(U f, const Normal3<T>& n) {
-	return Normal3<T>(f * n.x, f * n.y, f * n.z);
-}
-
-template <typename T>
-FOC_CPU_GPU inline Normal3<T> normalize(const Normal3<T>& n) {
-	return n / n.length();
-}
-
-template <typename T>
-inline T dot(const Normal3<T>& n1, const Vector3<T>& v2) {
-	return n1.x * v2.x + n1.y * v2.y + n1.z * v2.z;
-}
-
-template <typename T>
-FOC_CPU_GPU inline T dot(const Vector3<T>& v1, const Normal3<T>& n2) {
-	return v1.x * n2.x + v1.y * n2.y + v1.z * n2.z;
-}
-
-template <typename T>
-FOC_CPU_GPU inline T dot(const Normal3<T>& n1, const Normal3<T>& n2) {
-	return n1.x * n2.x + n1.y * n2.y + n1.z * n2.z;
-}
-
-template <typename T>
-FOC_CPU_GPU inline T absDot(const Normal3<T>& n1, const Vector3<T>& v2) {
-	return std::abs(n1.x * v2.x + n1.y * v2.y + n1.z * v2.z);
-}
-
-template <typename T>
-FOC_CPU_GPU inline T absDot(const Vector3<T>& v1, const Normal3<T>& n2) {
-	return std::abs(v1.x * n2.x + v1.y * n2.y + v1.z * n2.z);
-}
-
-template <typename T>
-FOC_CPU_GPU inline T absDot(const Normal3<T>& n1, const Normal3<T>& n2) {
-	return std::abs(n1.x * n2.x + n1.y * n2.y + n1.z * n2.z);
-}
-
-template <typename T>
-FOC_CPU_GPU inline T abs(const Normal3<T>& n) {
-	return Normal3<T>(std::abs(n.x), std::abs(n.y), std::abs(n.z));
-}
-
-template <typename T>
-FOC_CPU_GPU inline Normal3<T> faceforward(const Normal3<T>& n, const Vector3<T>& v) {
-	return dot(n, v) < 0.0f ? -n : n;
-}
-
-template <typename T>
-FOC_CPU_GPU inline Normal3<T> faceforward(const Normal3<T>& n, const Normal3<T>& n2) {
-	return dot(n, n2) < 0.0f ? -n : n;
-}
-
-template <typename T>
-FOC_CPU_GPU inline Normal3<T> faceforward(const Vector3<T>& v, const Vector3<T>& v2) {
-	return dot(v, v2) < 0.0f ? -v : v;
-}
-
-template <typename T>
-FOC_CPU_GPU inline Normal3<T> faceforward(const Vector3<T>& v, const Normal3<T>& n) {
-	return dot(v, n) < 0.0f ? -v : v;
-}
-
-template <typename T>
-FOC_CPU_GPU inline std::ostream& operator<<(std::ostream& os, const Normal3<T>& v) {
 	os << "[ " << v.x << ", " << v.y << ", " << v.z << " ]";
 	return os;
 }
