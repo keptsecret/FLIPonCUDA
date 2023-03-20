@@ -35,35 +35,35 @@
 #include <iterator>
 #include <new>
 #include <string>
-#include <vector>
 #include <thread>
+#include <vector>
 
 namespace foc {
 
 // Global forward declarations
-    template<typename T>
-    class Vector2;
+template <typename T>
+class Vector2;
 
-    template<typename T>
-    class Vector3;
+template <typename T>
+class Vector3;
 
-    template<typename T>
-    class Point3;
+template <typename T>
+class Point3;
 
-    template<typename T>
-    class Point2;
+template <typename T>
+class Point2;
 
-    template<typename T>
-    class Normal3;
+template <typename T>
+class Normal3;
 
-    using Point2f = Point2<float>;
-    using Point2i = Point2<int>;
-    using Point3f = Point3<float>;
-    using Vector2f = Vector2<float>;
-    using Vector2i = Vector2<int>;
-    using Vector3f = Vector3<float>;
-    using Normal3f = Normal3<float>;
+using Point2f = Point2<float>;
+using Point2i = Point2<int>;
+using Point3f = Point3<float>;
+using Vector2f = Vector2<float>;
+using Vector2i = Vector2<int>;
+using Vector3f = Vector3<float>;
+using Normal3f = Normal3<float>;
 
-}
+} // namespace foc
 
-#endif //FOC_H
+#endif // FOC_H
