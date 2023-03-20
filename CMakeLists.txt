@@ -52,11 +52,23 @@ target_compile_options (
 set( FOC_HEADERS
         src/foc.h
         src/vecmath.h
+        src/array3d.h
+        src/markerparticle.h
+        src/macgrid.h
+        src/cellmaterialgrid.h
+        src/fluidsim.h
+        )
+
+set( FOC_SOURCE
+        src/macgrid.cpp
+        src/cellmaterialgrid.cpp
+        src/fluidsim.cpp
         )
 
 if (CUDA_ENABLED)
     set_source_files_properties(
             ${FOC_HEADERS}
+            ${FOC_SOURCE}
 
             PROPERTIES LANGUAGE CUDA
     )
@@ -64,6 +76,7 @@ endif()
 
 add_library( flipfluidsim_lib STATIC
         ${FOC_HEADERS}
+        ${FOC_SOURCE}
         )
 
 target_compile_definitions ( flipfluidsim_lib PRIVATE ${FOC_DEFINITIONS} )

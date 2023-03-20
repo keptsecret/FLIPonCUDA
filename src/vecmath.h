@@ -133,8 +133,6 @@ public:
 
 	FOC_CPU_GPU explicit Vector3(const Point3<T>& p);
 
-	FOC_CPU_GPU explicit Vector3(const Normal3<T>& n);
-
 	FOC_CPU_GPU
 	Vector3<T> operator+(const Vector3<T>& v) const {
 		return Vector3(x + v.x, y + v.y, z + v.z);
