@@ -9,7 +9,7 @@ if (MSVC)
     list (APPEND FOC_DEFINITIONS "FOC_IS_MSVC" "_ENABLE_EXTENDED_ALIGNED_STORAGE")
 endif ()
 
-option(CUDA_ENABLED "Enable GPU acceleration" ON)
+option(CUDA_ENABLED "Enable GPU acceleration" OFF)
 if(CUDA_ENABLED)
     add_definitions(-DCUDA_ENABLED)
 endif()
@@ -56,12 +56,14 @@ set( FOC_HEADERS
         src/markerparticle.h
         src/macgrid.h
         src/cellmaterialgrid.h
+        src/scalarfield.h
         src/fluidsim.h
         )
 
 set( FOC_SOURCE
         src/macgrid.cpp
         src/cellmaterialgrid.cpp
+        src/scalarfield.cpp
         src/fluidsim.cpp
         )
 

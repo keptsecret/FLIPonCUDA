@@ -56,12 +56,22 @@ class Point2;
 using Point2f = Point2<float>;
 using Point2i = Point2<int>;
 using Point3f = Point3<float>;
+using Point3i = Point3<int>;
 using Vector2f = Vector2<float>;
 using Vector2i = Vector2<int>;
 using Vector3f = Vector3<float>;
 
 template <typename T>
+class Bounds3;
+using Bounds3f = Bounds3<float>;
+using Bounds3i = Bounds3<int>;
+
+template <typename T>
 class Array3D;
+
+inline double randomDouble(double min_val, double max_val) {
+	return min_val + (double)rand() / ((double)RAND_MAX / (max_val - min_val));
+}
 
 } // namespace foc
 
