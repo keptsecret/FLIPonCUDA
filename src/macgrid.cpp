@@ -111,9 +111,9 @@ float MACGrid::getVelocityMagSqCell(int i, int j, int k) {
 
 float MACGrid::getMaxVelocityMag() {
 	double maxSq = 0.0;
-	for (int k = 0; k < _ksize; k++) {
-		for (int j = 0; j < _jsize; j++) {
-			for (int i = 0; i < _isize; i++) {
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
 				double m = getVelocityMagSqCell(i, j, k);
 				maxSq = fmax(maxSq, m);
 			}
@@ -121,7 +121,7 @@ float MACGrid::getMaxVelocityMag() {
 	}
 
 	double max = maxSq;
-	if (maxsq > 0.0) {
+	if (maxSq > 0.0) {
 		max = sqrt(maxSq);
 	}
 
