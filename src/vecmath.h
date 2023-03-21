@@ -494,6 +494,106 @@ public:
 	T x, y;
 };
 
+/* -------------------------------------------------------------------------------
+ * Bounds (AABBs)
+ */
+
+template <typename T>
+class Bounds3 {
+public:
+	Bounds3() {
+		T min_num = std::numeric_limits<T>::lowest();
+		T max_num = std::numeric_limits<T>::max();
+		p_min = Point3<T>(max_num, max_num, max_num);
+		p_max = Point3<T>(min_num, min_num, min_num);
+	}
+
+	FOC_CPU_GPU
+	explicit Bounds3(const Point3<T>& p) :
+			p_min(p), p_max(p) {}
+
+	FOC_CPU_GPU
+	Bounds3(const Point3<T>& p1, const Point3<T>& p2) :
+			p_min(std::min(p1.x, p2.x), std::min(p1.y, p2.y), std::min(p1.z, p2.z)), p_max(std::max(p1.x, p2.x), std::max(p1.y, p2.y), std::max(p1.z, p2.z)) {}
+
+	FOC_CPU_GPU
+	inline const Point3<T>& operator[](int i) const {
+		return (i == 0) ? p_min : p_max;
+	}
+
+	FOC_CPU_GPU
+	inline Point3<T>& operator[](int i) {
+		return (i == 0) ? p_min : p_max;
+	}
+
+	bool operator==(const Bounds3<T>& b) const {
+		return b.p_min == p_min && b.p_max == p_max;
+	}
+
+	bool operator!=(const Bounds3<T>& b) const {
+		return b.p_min != p_min || b.p_max != p_max;
+	}
+
+	FOC_CPU_GPU
+	Point3<T> corner(int n_corner) const {
+		return Point3<T>((*this)[(n_corner & 1)].x,
+				(*this)[(n_corner & 2) ? 1 : 0].y,
+				(*this)[(n_corner & 4) ? 1 : 0].z);
+	}
+
+	FOC_CPU_GPU
+	Vector3<T> diagonal() const { return p_max - p_min; }
+
+	FOC_CPU_GPU
+	T surfaceArea() const {
+		Vector3<T> d = diagonal();
+		return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
+	}
+
+	FOC_CPU_GPU
+	T volume() const {
+		Vector3<T> d = diagonal();
+		return d.x * d.y * d.z;
+	}
+
+	FOC_CPU_GPU
+	int maximumAxis() const {
+		Vector3<T> d = diagonal();
+		if (d.x > d.y && d.x > d.z) {
+			return 0;
+		} else if (d.y > d.z) {
+			return 1;
+		} else {
+			return 2;
+		}
+	}
+
+	FOC_CPU_GPU
+	Vector3<T> offset(const Point3<T>& p) const {
+		Vector3<T> o = p - p_min;
+		if (p_max.x > p_min.x) {
+			o.x /= p_max.x - p_min.x;
+		}
+		if (p_max.y > p_min.y) {
+			o.y /= p_max.y - p_min.y;
+		}
+		if (p_max.z > p_min.z) {
+			o.z /= p_max.z - p_min.z;
+		}
+		return o;
+	}
+
+	FOC_CPU_GPU
+	void boundingSphere(Point3<T>* center, float* radius) const {
+		*center = (p_min + p_max) / 2;
+		*radius = bInside(*center, *this) ? distance(*center, p_max) : 0;
+	}
+
+public:
+
+	Point3<T> p_min, p_max;
+};
+
 /*---------------------------------------------------------------------------------*/
 /*
  * Inline geometry functions
@@ -734,6 +834,52 @@ template <typename T>
 FOC_CPU_GPU inline std::ostream& operator<<(std::ostream& os, const Point3<T>& v) {
 	os << "[ " << v.x << ", " << v.y << ", " << v.z << " ]";
 	return os;
+}
+
+// Bounds3
+template <typename T>
+FOC_CPU_GPU inline Bounds3<T> bUnion(const Bounds3<T>& b, const Point3<T>& p) {
+	return Bounds3<T>(min(b.p_min, p), max(b.p_max, p));
+}
+
+template <typename T>
+FOC_CPU_GPU inline Bounds3<T> bUnion(const Bounds3<T>& b1, const Bounds3<T>& b2) {
+	return Bounds3<T>(min(b1.p_min, b2.p_min), max(b1.p_max, b2.p_max));
+}
+
+template <typename T>
+FOC_CPU_GPU inline Bounds3<T> bIntersect(const Bounds3<T>& b1, const Bounds3<T>& b2) {
+	Bounds3<T> b;
+	b.p_min = max(b1.p_min, b2.p_min);
+	b.p_max = min(b1.p_max, b2.p_max);
+	return b;
+}
+
+template <typename T>
+FOC_CPU_GPU inline bool bOverlaps(const Bounds3<T>& b1, const Bounds3<T>& b2) {
+	bool x = (b1.p_max.x >= b2.p_min.x) && (b1.p_min.x <= b2.p_max.x);
+	bool y = (b1.p_max.y >= b2.p_min.y) && (b1.p_min.y <= b2.p_max.y);
+	bool z = (b1.p_max.z >= b2.p_min.z) && (b1.p_min.z <= b2.p_max.z);
+	return x && y && z;
+}
+
+template <typename T>
+FOC_CPU_GPU inline bool bInside(const Point3<T>& p, const Bounds3<T>& b) {
+	return p.x >= b.p_min.x && p.x <= b.p_max.x &&
+			p.y >= b.p_min.y && p.y <= b.p_max.y &&
+			p.z >= b.p_min.z && p.z <= b.p_max.z;
+}
+
+template <typename T>
+FOC_CPU_GPU inline bool bInsideExclusive(const Point3<T>& p, const Bounds3<T>& b) {
+	return p.x >= b.p_min.x && p.x < b.p_max.x &&
+			p.y >= b.p_min.y && p.y < b.p_max.y &&
+			p.z >= b.p_min.z && p.z < b.p_max.z;
+}
+
+template <typename T, typename U>
+FOC_CPU_GPU inline bool bExpand(const Bounds3<T>& b, U delta) {
+	return Bounds3<T>(b.p_min - Vector3<T>(delta, delta, delta), b.p_max + Vector3<T>(delta, delta, delta));
 }
 
 } // namespace foc
