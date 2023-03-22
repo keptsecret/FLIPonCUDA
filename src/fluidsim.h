@@ -17,6 +17,8 @@ public:
 	~FluidSimulation() {}
 
 	void initialize();
+	void simulate(double fps, int numFrames);
+	void update(double dt);
 
 	void addFluidPoint(double x, double y, double z, double r);
 	void addFluidPoint(Point3f p, double r);
@@ -25,12 +27,28 @@ public:
 
 private:
 	void initializeGrids(int i, int j, int k, int cellsize);
+	void initializeVectors(int i, int j, int k);
 
 	void initializeSolidCells();
 	void initializeFluid();
+	void initializeMarkerParticles();
 
 	void addMarkerParticlesToCell(Point3i idx);
 	void addMarkerParticlesToCell(Point3i idx, Vector3f vel);
+
+	void removeParticlesInSolidCells();
+	void updateFluidCells();
+
+	void computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir);
+	void advectVelocityFieldU();
+	void advectVelocityFieldV();
+	void advectVelocityFieldW();
+	void advectVelocityField();
+
+	double getNextTimeStep();
+	double getMaxParticleSpeed();
+
+	void stepSimulation(double dt);
 
 private:
 	struct FluidPoint {
@@ -52,18 +70,22 @@ private:
 	double gravity = -9.81;
 	double density = 1000.0;
 	double ratioFLIPPIC = 0.95;
+	FOC_CONST double CFLConditionNumber = 5.0;		// maximum number of cells a particle can move
+	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
 
 	int isize, jsize, ksize;
 	double dcell;
 
-	int currentFrame;
+	bool isCurrentFrameFinished = false;
+	int currentFrame = 0;
+	double simulationTime = 0.0;
 
 	std::vector<FluidPoint> fluidPoints;
 	std::vector<FluidCuboid> fluidCuboids;
-	std::vector<Point3i> fluidCells;
 
+	std::vector<Point3i> fluidCellIndices;
 	std::vector<MarkerParticle> markerParticles;
 	MACGrid macGrid;
 	CellMaterialGrid materialGrid;
