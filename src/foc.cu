@@ -1,8 +1,13 @@
 #include "foc.h"
 
-#include <iostream>
+#include "fluidsim.h"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    foc::FluidSimulation fluidsim(64, 64, 64, 0.125);
+
+	fluidsim.addFluidPoint(32, 32, 32, 5.0);
+	fluidsim.initialize();
+	fluidsim.simulate(30.0, 30);
+
     return 0;
 }

@@ -63,7 +63,7 @@ void ScalarField::addCuboid(Point3f pmin, Point3f pmax) {
 	Bounds3f bbox = Bounds3f(pmin, pmax);
 	getGridIndexBounds(bbox, cellsize, isize, jsize, ksize, &gmin, &gmax);
 
-	double eps = 10e-6;
+
 	Point3f gpos;
 	for (int k = gmin.z; k <= gmax.z; k++) {
 		for (int j = gmin.y; j <= gmax.y; j++) {
@@ -74,10 +74,10 @@ void ScalarField::addCuboid(Point3f pmin, Point3f pmax) {
 
 				gpos = gridIndexToPosition(i, j, k, cellsize);
 				if (bInside(gpos, bbox)) {
-					addScalarFieldValue(i, j, k, surfaceThreshold + eps);
+					addScalarFieldValue(i, j, k, surfaceThreshold + foc::ShadowEpsilon);
 
 					if (isWeightFieldEnabled) {
-						weightField.set(i, j, k, (float)(weightField(i, j, k) + surfaceThreshold + eps));
+						weightField.set(i, j, k, (float)(weightField(i, j, k) + surfaceThreshold + foc::ShadowEpsilon));
 					}
 				}
 			}

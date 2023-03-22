@@ -11,7 +11,7 @@ endif ()
 
 option(CUDA_ENABLED "Enable GPU acceleration" OFF)
 if(CUDA_ENABLED)
-    add_definitions(-DCUDA_ENABLED)
+    add_definitions(-DFOC_BUILD_GPU)
 endif()
 
 set(CMAKE_CUDA_STANDARD 17)

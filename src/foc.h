@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#if defined(CUDA_ENABLED) && defined(__CUDACC__)
+#if defined(FOC_BUILD_GPU) && defined(__CUDACC__)
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #define FOC_CPU_GPU __host__ __device__
@@ -68,6 +68,29 @@ using Bounds3i = Bounds3<int>;
 
 template <typename T>
 class Array3D;
+
+// Global constants
+#ifdef _MSC_VER
+#define MaxFloat std::numeric_limits<float>::max()
+#define Infinity std::numeric_limits<float>::infinity()
+#else
+static FOC_CONST float MaxFloat = std::numeric_limits<float>::max();
+static FOC_CONST float Infinity = std::numeric_limits<float>::infinity();
+#endif
+#ifdef _MSC_VER
+#define MachineEpsilon (std::numeric_limits<float>::epsilon() * 0.5)
+#else
+static constexpr float MachineEpsilon =
+		std::numeric_limits<float>::epsilon() * 0.5;
+#endif
+static FOC_CONST float ShadowEpsilon = 0.0001f;
+static FOC_CONST float Pi = 3.14159265358979323846;
+static FOC_CONST float InvPi = 0.31830988618379067154;
+static FOC_CONST float Inv2Pi = 0.15915494309189533577;
+static FOC_CONST float Inv4Pi = 0.07957747154594766788;
+static FOC_CONST float PiOver2 = 1.57079632679489661923;
+static FOC_CONST float PiOver4 = 0.78539816339744830961;
+static FOC_CONST float Sqrt2 = 1.41421356237309504880;
 
 inline double randomDouble(double min_val, double max_val) {
 	return min_val + (double)rand() / ((double)RAND_MAX / (max_val - min_val));
