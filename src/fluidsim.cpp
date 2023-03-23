@@ -1,6 +1,7 @@
 #include "fluidsim.h"
 
 #include "scalarfield.h"
+#include "pressuresolver.h"
 
 namespace foc {
 
@@ -296,7 +297,7 @@ void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>&
 	const auto weightField = velocityGrid.getWeightFieldPointer();
 	for (int k = 0; k < field.depth; k++) {
 		for (int j = 0; j < field.height; j++) {
-			for (int i; i < field.width; i++) {
+			for (int i = 0; i < field.width; i++) {
 				field.set(i, j, k, scalarField->get(i, j, k));
 
 				if (weightField->get(i, j, k) > ShadowEpsilon) {
@@ -396,7 +397,7 @@ void FluidSimulation::advectVelocityFieldW() {
 	Array3D<bool> isValueSet = Array3D<bool>(isize, jsize, ksize + 1, false);
 	computeVelocityField(wvel, isValueSet, 2);
 
-	std::vector<Point3i> extrapolationIndices(isize  * jsize* (ksize + 1));
+	std::vector<Point3i> extrapolationIndices(isize * jsize * (ksize + 1));
 	for (int k = 0; k < wvel.depth; k++) {
 		for (int j = 0; j < wvel.height; j++) {
 			for (int i = 0; i < wvel.width; i++) {
@@ -428,6 +429,29 @@ void FluidSimulation::advectVelocityFieldW() {
 			macGrid.setW(g.x, g.y, g.z, avg / weight);
 		}
 	}
+}
+
+void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt) {
+	PressureSolverParameters params;
+	params.cellsize = dcell;
+	params.density = density;
+	params.deltaTime = dt;
+	params.fluidCells = &fluidCellIndices;
+	params.materialGrid = &materialGrid;
+	params.velocityField = &macGrid;
+
+	VectorXd pressures(fluidCellIndices.size());
+	PressureSolver solver;
+	solver.solve(params, pressures);
+
+	for (int i = 0; i < fluidCellIndices.size(); i++) {
+		Point3i idx = fluidCellIndices[i];
+		pressureGrid.set(idx.x, idx.y, idx.z, (float)pressures[i]);
+	}
+}
+
+void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt) {
+	// TODO: implement
 }
 
 void FluidSimulation::advectVelocityField() {
@@ -467,6 +491,8 @@ void FluidSimulation::stepSimulation(double dt) {
 
 	// update and apply pressure
 	Array3D<float> pressureGrid(isize, jsize, ksize, 0.0f);
+	updatePressureGrid(pressureGrid, dt);
+	applyPressureToVelocityField(pressureGrid, dt);
 
 	// update (advect) marker particles
 }

@@ -1,9 +1,9 @@
 #ifndef FOC_FLUIDSIM_H
 #define FOC_FLUIDSIM_H
 
+#include "cellmaterialgrid.h"
 #include "foc.h"
 #include "macgrid.h"
-#include "cellmaterialgrid.h"
 #include "markerparticle.h"
 
 namespace foc {
@@ -45,6 +45,9 @@ private:
 	void advectVelocityFieldW();
 	void advectVelocityField();
 
+	void updatePressureGrid(Array3D<float>& pressureGrid, double dt);
+	void applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt);
+
 	double getNextTimeStep();
 	double getMaxParticleSpeed();
 
@@ -56,21 +59,23 @@ private:
 		double radius = 0.0;
 
 		FluidPoint() {}
-		FluidPoint(Point3f pos, double r) : position(pos), radius(r) {}
+		FluidPoint(Point3f pos, double r) :
+				position(pos), radius(r) {}
 	};
 
 	struct FluidCuboid {
 		Bounds3f bbox;
 
 		FluidCuboid() {}
-		FluidCuboid(Point3f pmin, Point3f pmax) : bbox(pmin, pmax) {}
+		FluidCuboid(Point3f pmin, Point3f pmax) :
+				bbox(pmin, pmax) {}
 	};
 
 	bool isInitialized = false;
 	double gravity = -9.81;
 	double density = 1000.0;
 	double ratioFLIPPIC = 0.95;
-	FOC_CONST double CFLConditionNumber = 5.0;		// maximum number of cells a particle can move
+	FOC_CONST double CFLConditionNumber = 5.0; // maximum number of cells a particle can move
 	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
