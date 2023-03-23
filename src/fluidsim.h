@@ -74,6 +74,7 @@ private:
 	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
+	int maxParticlesPerVelocityAdvection = 5e6;
 
 	int isize, jsize, ksize;
 	double dcell;

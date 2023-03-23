@@ -14,14 +14,23 @@ public:
 	ScalarField(int i, int j, int k, int cellsize);
 
 	void setPointRadius(double r);
+	void setFieldOffset(Vector3f offset);
+
+	void enableWeightField();
+	void applyWeightField();
 
 	void addPoint(Point3f p, double r);
 	void addPoint(Point3f p);
 	void addCuboid(Point3f pmin, Point3f pmax);
 
+	void addPointValue(Point3f p, double val);
+
 	void setScalarFieldValue(int i, int j, int k, double value);
 	void addScalarFieldValue(int i, int j, int k, double value);
 	double getScalarFieldValue(int i, int j, int k);
+
+	Array3D<float>* getScalarFieldPointer();
+	Array3D<float>* getWeightFieldPointer();
 
 	void setMaterialGrid(CellMaterialGrid& materialGrid);
 

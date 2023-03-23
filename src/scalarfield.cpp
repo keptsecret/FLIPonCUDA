@@ -17,6 +17,37 @@ void ScalarField::setPointRadius(double r) {
 	coef3 = (22.0 / 9.0) * (1.0 / (r * r));
 }
 
+void ScalarField::setFieldOffset(Vector3f offset) {
+	gridOffset = offset;
+}
+
+void ScalarField::enableWeightField() {
+	if (isWeightFieldEnabled) {
+		return;
+	}
+
+	weightField = Array3D<float>(isize, jsize, ksize, 0.0f);
+	isWeightFieldEnabled = true;
+}
+
+void ScalarField::applyWeightField() {
+	if (!isWeightFieldEnabled) {
+		return;
+	}
+
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
+				float weight = weightField(i, j, k);
+				if (weight > 0.0) {
+					float v = field(i, j, k) / weight;
+					setScalarFieldValue(i, j, k, v);
+				}
+			}
+		}
+	}
+}
+
 void ScalarField::addPoint(Point3f p, double r) {
 	setPointRadius(r);
 	addPoint(p);
@@ -85,6 +116,40 @@ void ScalarField::addCuboid(Point3f pmin, Point3f pmax) {
 	}
 }
 
+void ScalarField::addPointValue(Point3f p, double val) {
+	p -= gridOffset;
+
+	Point3i gmin, gmax;
+	getGridIndexBounds(p, radius, cellsize, isize, jsize, ksize, &gmin, &gmax);
+
+	Point3f gpos;
+	Vector3f v;
+	double rsq = radius * radius;
+	double distsq;
+	double weight;
+	for (int k = gmin.z; k <= gmax.z; k++) {
+		for (int j = gmin.y; j <= gmax.y; j++) {
+			for (int i = gmin.x; i <= gmax.x; i++) {
+				if (isMaxScalarFieldThresholdSet && field(i, j, k) > maxScalarFieldThreshold) {
+					continue;
+				}
+
+				gpos = gridIndexToPosition(i, j, k, cellsize);
+				v = gpos - p;
+				distsq = dot(v, v);
+				if (distsq < rsq) {
+					weight = evaluateTricubicFieldFunctionForRadiusSquared(distsq);
+					addScalarFieldValue(i, j, k, weight * val);
+
+					if (isWeightFieldEnabled) {
+						weightField.set(i, j, k, weightField(i, j, k) + (float)weight);
+					}
+				}
+			}
+		}
+	}
+}
+
 void ScalarField::setScalarFieldValue(int i, int j, int k, double value) {
 	field.set(i, j, k, value);
 	isVertexSet.set(i, j, k, true);
@@ -102,6 +167,14 @@ double ScalarField::getScalarFieldValue(int i, int j, int k) {
 	}
 
 	return val;
+}
+
+Array3D<float>* ScalarField::getScalarFieldPointer() {
+	return &field;
+}
+
+Array3D<float>* ScalarField::getWeightFieldPointer() {
+	return &weightField;
 }
 
 void ScalarField::setMaterialGrid(CellMaterialGrid& materialGrid) {

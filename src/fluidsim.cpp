@@ -158,7 +158,6 @@ void FluidSimulation::initializeMarkerParticles() {
 	markerParticleRadius = pow((3 * pvolume) / (4 * foc::Pi), 1.0 / 3.0);
 }
 
-
 void FluidSimulation::addMarkerParticlesToCell(Point3i idx) {
 	addMarkerParticlesToCell(idx, Vector3f());
 }
@@ -228,7 +227,7 @@ void FluidSimulation::updateFluidCells() {
 
 	fluidCellIndices.clear();
 
-	// TODO: potential for speedup
+	// TODO: potential for parallelization
 	for (const auto& mp : markerParticles) {
 		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
 		materialGrid.set(idx.x, idx.y, idx.z, Material::fluid);
@@ -259,17 +258,176 @@ void FluidSimulation::updateFluidCells() {
 
 void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir) {
 	ScalarField velocityGrid(field.width, field.height, field.depth, dcell);
+	velocityGrid.setPointRadius(dcell);
+	velocityGrid.enableWeightField();
 
+	Vector3f offset;
+	switch (dir) {
+		case 0: // U
+			offset = Vector3f(0.0, 0.5 * dcell, 0.5 * dcell);
+			break;
+		case 1: // V
+			offset = Vector3f(0.5 * dcell, 0.0, 0.5 * dcell);
+			break;
+		case 2: // U
+			offset = Vector3f(0.5 * dcell, 0.5 * dcell, 0.0);
+			break;
+		default:
+			return;
+	}
+	velocityGrid.setFieldOffset(offset);
+
+	std::vector<Point3f> positions;
+	std::vector<float> velocity; // velocity in direction
+	positions.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
+	velocity.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
+
+	// TODO: potential for parallelization
+#ifndef FOC_BUILD_GPU
+	for (const auto& mp : markerParticles) {
+		velocityGrid.addPointValue(mp.position, mp.velocity[dir]); // TODO: potentially check weights
+	}
+#else
+	// for cuda acceleration here
+#endif
+	velocityGrid.applyWeightField();
+
+	const auto scalarField = velocityGrid.getScalarFieldPointer();
+	const auto weightField = velocityGrid.getWeightFieldPointer();
+	for (int k = 0; k < field.depth; k++) {
+		for (int j = 0; j < field.height; j++) {
+			for (int i; i < field.width; i++) {
+				field.set(i, j, k, scalarField->get(i, j, k));
+
+				if (weightField->get(i, j, k) > ShadowEpsilon) {
+					isValueSet.set(i, j, k, true);
+				}
+			}
+		}
+	}
 }
 
 void FluidSimulation::advectVelocityFieldU() {
 	macGrid.clearU();
+
+	Array3D<float> uvel = Array3D<float>(isize + 1, jsize, ksize, 0.0f);
+	Array3D<bool> isValueSet = Array3D<bool>(isize + 1, jsize, ksize, false);
+	computeVelocityField(uvel, isValueSet, 0);
+
+	std::vector<Point3i> extrapolationIndices((isize + 1) * jsize * ksize);
+	for (int k = 0; k < uvel.depth; k++) {
+		for (int j = 0; j < uvel.height; j++) {
+			for (int i = 0; i < uvel.width; i++) {
+				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid)) {
+					if (!isValueSet(i, j, k)) {
+						extrapolationIndices.push_back(Point3i(i, j, k));
+					} else {
+						macGrid.setU(i, j, k, uvel(i, j, k));
+					}
+				}
+			}
+		}
+	}
+
+	Point3i neighbors[26];
+	for (const auto& g : extrapolationIndices) {
+		getNeighborGridIndices26(g.x, g.y, g.z, neighbors);
+
+		double avg = 0.0, weight = 0.0;
+		for (int i = 0; i < 26; i++) {
+			Point3i n = neighbors[i];
+			if (uvel.isIndexInRange(n.x, n.y, n.z) && fabs(uvel(n.x, n.y, n.z)) > 0.0) {
+				avg += uvel(n.x, n.y, n.z);
+				weight += 1.0;
+			}
+		}
+
+		if (weight > 0.0) {
+			macGrid.setU(g.x, g.y, g.z, avg / weight);
+		}
+	}
 }
 
 void FluidSimulation::advectVelocityFieldV() {
+	macGrid.clearV();
+
+	Array3D<float> vvel = Array3D<float>(isize, jsize + 1, ksize, 0.0f);
+	Array3D<bool> isValueSet = Array3D<bool>(isize, jsize + 1, ksize, false);
+	computeVelocityField(vvel, isValueSet, 1);
+
+	std::vector<Point3i> extrapolationIndices(isize * (jsize + 1) * ksize);
+	for (int k = 0; k < vvel.depth; k++) {
+		for (int j = 0; j < vvel.height; j++) {
+			for (int i = 0; i < vvel.width; i++) {
+				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid)) {
+					if (!isValueSet(i, j, k)) {
+						extrapolationIndices.push_back(Point3i(i, j, k));
+					} else {
+						macGrid.setV(i, j, k, vvel(i, j, k));
+					}
+				}
+			}
+		}
+	}
+
+	Point3i neighbors[26];
+	for (const auto& g : extrapolationIndices) {
+		getNeighborGridIndices26(g.x, g.y, g.z, neighbors);
+
+		double avg = 0.0, weight = 0.0;
+		for (int i = 0; i < 26; i++) {
+			Point3i n = neighbors[i];
+			if (vvel.isIndexInRange(n.x, n.y, n.z) && fabs(vvel(n.x, n.y, n.z)) > 0.0) {
+				avg += vvel(n.x, n.y, n.z);
+				weight += 1.0;
+			}
+		}
+
+		if (weight > 0.0) {
+			macGrid.setV(g.x, g.y, g.z, avg / weight);
+		}
+	}
 }
 
 void FluidSimulation::advectVelocityFieldW() {
+	macGrid.clearW();
+
+	Array3D<float> wvel = Array3D<float>(isize, jsize, ksize + 1, 0.0f);
+	Array3D<bool> isValueSet = Array3D<bool>(isize, jsize, ksize + 1, false);
+	computeVelocityField(wvel, isValueSet, 2);
+
+	std::vector<Point3i> extrapolationIndices(isize  * jsize* (ksize + 1));
+	for (int k = 0; k < wvel.depth; k++) {
+		for (int j = 0; j < wvel.height; j++) {
+			for (int i = 0; i < wvel.width; i++) {
+				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid)) {
+					if (!isValueSet(i, j, k)) {
+						extrapolationIndices.push_back(Point3i(i, j, k));
+					} else {
+						macGrid.setW(i, j, k, wvel(i, j, k));
+					}
+				}
+			}
+		}
+	}
+
+	Point3i neighbors[26];
+	for (const auto& g : extrapolationIndices) {
+		getNeighborGridIndices26(g.x, g.y, g.z, neighbors);
+
+		double avg = 0.0, weight = 0.0;
+		for (int i = 0; i < 26; i++) {
+			Point3i n = neighbors[i];
+			if (wvel.isIndexInRange(n.x, n.y, n.z) && fabs(wvel(n.x, n.y, n.z)) > 0.0) {
+				avg += wvel(n.x, n.y, n.z);
+				weight += 1.0;
+			}
+		}
+
+		if (weight > 0.0) {
+			macGrid.setW(g.x, g.y, g.z, avg / weight);
+		}
+	}
 }
 
 void FluidSimulation::advectVelocityField() {
@@ -308,6 +466,7 @@ void FluidSimulation::stepSimulation(double dt) {
 	advectVelocityField();
 
 	// update and apply pressure
+	Array3D<float> pressureGrid(isize, jsize, ksize, 0.0f);
 
 	// update (advect) marker particles
 }
