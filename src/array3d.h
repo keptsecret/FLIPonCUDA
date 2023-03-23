@@ -90,6 +90,22 @@ public:
 		grid[idx] = value;
 	}
 
+	T get(int i, int j, int k) {
+		if (!isIndexInRange(i, j, k)) {
+			std::printf("Error: index out of range.\n");
+		}
+
+		return grid[getFlattenedIndex(i, j, k)];
+	}
+
+	T get(int idx) {
+		if (!(idx >= 0 && idx < numElements)) {
+			std::printf("Error: index out of range.\n");
+		}
+
+		return grid[idx];
+	}
+
 	T* data() {
 		return grid;
 	}
@@ -156,20 +172,43 @@ inline void getGridIndexBounds(Bounds3f bbox, double cellsize, int width, int he
 	*gmin = Point3i((int)fmax((*gmin).x, 0),
 			(int)fmax((*gmin).y, 0),
 			(int)fmax((*gmin).z, 0));
-	*gmax = Point3i((int)fmin((*gmax).x, width-1),
-			(int)fmin((*gmax).y, height-1),
-			(int)fmin((*gmax).z, depth-1));
+	*gmax = Point3i((int)fmin((*gmax).x, width - 1),
+			(int)fmin((*gmax).y, height - 1),
+			(int)fmin((*gmax).z, depth - 1));
 }
 
 inline void getGridIndexVertices(int i, int j, int k, Point3i v[8]) {
-	v[0] = Point3i(i,     j,     k);
-	v[1] = Point3i(i + 1, j,     k);
-	v[2] = Point3i(i + 1, j,     k + 1);
-	v[3] = Point3i(i,     j,     k + 1);
-	v[4] = Point3i(i,     j + 1, k);
+	v[0] = Point3i(i, j, k);
+	v[1] = Point3i(i + 1, j, k);
+	v[2] = Point3i(i + 1, j, k + 1);
+	v[3] = Point3i(i, j, k + 1);
+	v[4] = Point3i(i, j + 1, k);
 	v[5] = Point3i(i + 1, j + 1, k);
 	v[6] = Point3i(i + 1, j + 1, k + 1);
-	v[7] = Point3i(i,     j + 1, k + 1);
+	v[7] = Point3i(i, j + 1, k + 1);
+}
+
+inline void getNeighborGridIndices6(int i, int j, int k, Point3i nb[6]) {
+	nb[0] = Point3i(i - 1, j, k);
+	nb[1] = Point3i(i + 1, j, k);
+	nb[2] = Point3i(i, j - 1, k);
+	nb[3] = Point3i(i, j + 1, k);
+	nb[4] = Point3i(i, j, k - 1);
+	nb[5] = Point3i(i, j, k + 1);
+}
+
+inline void getNeighborGridIndices26(int i, int j, int k, Point3i nb[26]) {
+	int idx = 0;
+	for (int nk = k - 1; nk <= k + 1; nk++) {
+		for (int nj = j - 1; nj <= j + 1; nj++) {
+			for (int ni = i - 1; ni <= i + 1; ni++) {
+				if (!(ni == i && nj == j && nk == k)) {
+					nb[idx] = Point3i(ni, nj, nk);
+					idx++;
+				}
+			}
+		}
+	}
 }
 
 } // namespace foc
