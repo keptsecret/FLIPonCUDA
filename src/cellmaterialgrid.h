@@ -27,6 +27,10 @@ public:
 	bool isCellFluid(int i, int j, int k);
 	bool isCellSolid(int i, int j, int k);
 
+	bool isFaceBorderingMaterialU(int i, int j, int k, Material m);
+	bool isFaceBorderingMaterialV(int i, int j, int k, Material m);
+	bool isFaceBorderingMaterialW(int i, int j, int k, Material m);
+
 	int isize, jsize, ksize;
 
 private:
