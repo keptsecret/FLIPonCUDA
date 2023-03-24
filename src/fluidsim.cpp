@@ -9,7 +9,7 @@ FluidSimulation::FluidSimulation() :
 		isize(0), jsize(0), ksize(0), dcell(0) {
 }
 
-FluidSimulation::FluidSimulation(int width, int height, int depth, int cellsize) :
+FluidSimulation::FluidSimulation(int width, int height, int depth, double cellsize) :
 		isize(width), jsize(height), ksize(depth), dcell(cellsize) {
 	initializeGrids(width, height, depth, cellsize);
 	initializeVectors(width, height, depth);
@@ -147,7 +147,6 @@ void FluidSimulation::initializeFluid() {
 	field.setMaterialGrid(materialGrid);
 	double threshold = field.getSurfaceThreshold();
 
-	Vector3f c;
 	for (int k = 0; k < ksize; k++) {
 		for (int j = 0; j < jsize; j++) {
 			for (int i = 0; i < isize; i++) {
@@ -224,13 +223,15 @@ void FluidSimulation::removeParticlesInSolidCells() {
 		isRemoved.push_back(isInSolidCell);
 	}
 
-	// removes elements at positions true
-	markerParticles.erase(std::remove_if(markerParticles.begin(), markerParticles.end(),
-								  [&isRemoved, &markerParticles = markerParticles](auto const& i) {
-									  return isRemoved.at(&i - markerParticles.data());
-								  }),
-			markerParticles.end());
-	markerParticles.shrink_to_fit();
+	if (hasParticleInSolidCell) {
+		// removes elements at positions true
+		markerParticles.erase(std::remove_if(markerParticles.begin(), markerParticles.end(),
+									  [&isRemoved, &markerParticles = markerParticles](auto const& i) {
+										  return isRemoved.at(&i - markerParticles.data());
+									  }),
+				markerParticles.end());
+		markerParticles.shrink_to_fit();
+	}
 }
 
 void FluidSimulation::updateFluidCells() {

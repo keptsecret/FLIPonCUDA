@@ -12,7 +12,7 @@ class FluidSimulation {
 public:
 	FluidSimulation();
 
-	FluidSimulation(int width, int height, int depth, int cellsize);
+	FluidSimulation(int width, int height, int depth, double cellsize);
 
 	~FluidSimulation() {}
 
