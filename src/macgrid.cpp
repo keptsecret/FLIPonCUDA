@@ -165,15 +165,207 @@ Vector3f MACGrid::getVelocityFaceW(int i, int j, int k) {
 
 Vector3f MACGrid::getVelocityAt(double x, double y, double z) {
 	// TODO: implement?
-//	double xvel = interpolateU(x, y, z);
-//	double yvel = interpolateV(x, y, z);
-//	double zvel = interpolateW(x, y, z);
+	//	double xvel = interpolateU(x, y, z);
+	//	double yvel = interpolateV(x, y, z);
+	//	double zvel = interpolateW(x, y, z);
 
 	return Vector3f();
 }
 
 Vector3f MACGrid::getVelocityAt(Point3f pos) {
 	return getVelocityAt(pos.x, pos.y, pos.z);
+}
+
+void MACGrid::resetExtrapolatedFluidVelocities(CellMaterialGrid& materialGrid) {
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize + 1; i++) {
+				if (!materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid)) {
+					setU(i, j, k, 0.0);
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize + 1; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (!materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid)) {
+					setV(i, j, k, 0.0);
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize + 1; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (!materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid)) {
+					setW(i, j, k, 0.0);
+				}
+			}
+		}
+	}
+}
+
+void MACGrid::updateExtrapolationLayers(CellMaterialGrid& materialGrid, Array3D<int>& layerGrid) {
+	for (int k = 0; k < materialGrid.ksize; k++) {
+		for (int j = 0; j < materialGrid.jsize; j++) {
+			for (int i = 0; i < materialGrid.isize; i++) {
+				if (materialGrid.isCellFluid(i, j, k)) {
+					layerGrid.set(i, j, k, 0);
+				}
+			}
+		}
+	}
+
+	for (int layer = 1; layer <= numExtrapolationLayers; layer++) {
+		Point3i neighbors[6];
+
+		for (int k = 0; k < layerGrid.depth; k++) {
+			for (int j = 0; j < layerGrid.height; j++) {
+				for (int i = 0; i < layerGrid.width; i++) {
+					if (layerGrid(i, j, k) == layer - 1 && materialGrid.isCellSolid(i, j, k)) {
+						getNeighborGridIndices6(i, j, k, neighbors);
+						for (int idx = 0; idx < 6; idx++) {
+							Point3i nb = neighbors[i];
+
+							if (isGridIndexInRange(nb, isize, jsize, ksize) && layerGrid(nb.x, nb.y, nb.z) == -1 && materialGrid.isCellSolid(nb.x, nb.y, nb.z)) {
+								layerGrid.set(nb.x, nb.y, nb.z, layer);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+double MACGrid::getExtrapolatedVelocityForFaceU(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid) {
+	Point3i neighbors[6];
+	getNeighborGridIndices6(i, j, k, neighbors);
+
+	double sum = 0.0, weights = 0.0;
+	for (int idx = 0; idx < 6; idx++) {
+		Point3i nb = neighbors[idx];
+		if (isGridIndexInRange(i, j, k, isize + 1, jsize, ksize) && isFaceBorderingGridValueU(nb.x, nb.y, nb.z, layerIdx - 1, layerGrid)) {
+			sum += U(nb.x, nb.y, nb.z);
+			weights++;
+		}
+	}
+
+	if (sum == 0.0) {
+		return 0.0;
+	}
+
+	return sum / weights;
+}
+
+double MACGrid::getExtrapolatedVelocityForFaceV(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid) {
+	Point3i neighbors[6];
+	getNeighborGridIndices6(i, j, k, neighbors);
+
+	double sum = 0.0, weights = 0.0;
+	for (int idx = 0; idx < 6; idx++) {
+		Point3i nb = neighbors[idx];
+		if (isGridIndexInRange(i, j, k, isize, jsize + 1, ksize) && isFaceBorderingGridValueV(nb.x, nb.y, nb.z, layerIdx - 1, layerGrid)) {
+			sum += V(nb.x, nb.y, nb.z);
+			weights++;
+		}
+	}
+
+	if (sum == 0.0) {
+		return 0.0;
+	}
+
+	return sum / weights;
+}
+
+double MACGrid::getExtrapolatedVelocityForFaceW(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid) {
+	Point3i neighbors[6];
+	getNeighborGridIndices6(i, j, k, neighbors);
+
+	double sum = 0.0, weights = 0.0;
+	for (int idx = 0; idx < 6; idx++) {
+		Point3i nb = neighbors[idx];
+		if (isGridIndexInRange(i, j, k, isize, jsize, ksize + 1) && isFaceBorderingGridValueW(nb.x, nb.y, nb.z, layerIdx - 1, layerGrid)) {
+			sum += W(nb.x, nb.y, nb.z);
+			weights++;
+		}
+	}
+
+	if (sum == 0.0) {
+		return 0.0;
+	}
+
+	return sum / weights;
+}
+
+void MACGrid::extrapolateVelocitiesForLayerIndexU(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid) {
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize + 1; i++) {
+				bool isExtrapolated = isFaceBorderingGridValueU(i, j, k, idx, layerGrid)
+						&& isFaceBorderingGridValueU(i - 1, j, k, idx, layerGrid)
+						&& (!materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid));
+				if (isExtrapolated) {
+					double vel = getExtrapolatedVelocityForFaceU(i, j, k, idx, layerGrid);
+					setU(i, j, k, vel);
+				}
+			}
+		}
+	}
+}
+
+void MACGrid::extrapolateVelocitiesForLayerIndexV(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid) {
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize + 1; j++) {
+			for (int i = 0; i < isize; i++) {
+				bool isExtrapolated = isFaceBorderingGridValueV(i, j, k, idx, layerGrid)
+						&& isFaceBorderingGridValueV(i, j - 1, k, idx, layerGrid)
+						&& (!materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid));
+				if (isExtrapolated) {
+					double vel = getExtrapolatedVelocityForFaceV(i, j, k, idx, layerGrid);
+					setV(i, j, k, vel);
+				}
+			}
+		}
+	}
+}
+
+void MACGrid::extrapolateVelocitiesForLayerIndexW(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid) {
+	for (int k = 0; k < ksize + 1; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
+				bool isExtrapolated = isFaceBorderingGridValueW(i, j, k, idx, layerGrid)
+						&& isFaceBorderingGridValueW(i, j, k - 1, idx, layerGrid)
+						&& (!materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid));
+				if (isExtrapolated) {
+					double vel = getExtrapolatedVelocityForFaceW(i, j, k, idx, layerGrid);
+					setW(i, j, k, vel);
+				}
+			}
+		}
+	}
+}
+
+void MACGrid::extrapolateVelocitiesForLayerIndex(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid) {
+	extrapolateVelocitiesForLayerIndexU(idx, materialGrid, layerGrid);
+	extrapolateVelocitiesForLayerIndexV(idx, materialGrid, layerGrid);
+	extrapolateVelocitiesForLayerIndexW(idx, materialGrid, layerGrid);
+}
+
+void MACGrid::extrapolateVelocityField(CellMaterialGrid& materialGrid, int numLayers) {
+	numExtrapolationLayers = numLayers;
+
+	Array3D<int> layerGrid(isize, jsize, ksize, -1);
+
+	resetExtrapolatedFluidVelocities(materialGrid);
+	updateExtrapolationLayers(materialGrid, layerGrid);
+
+	for (int i = 1; i <= numLayers; i++) {
+		extrapolateVelocitiesForLayerIndex(i, materialGrid, layerGrid);
+	}
 }
 
 } // namespace foc

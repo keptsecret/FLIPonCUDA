@@ -1,7 +1,7 @@
 #include "fluidsim.h"
 
-#include "scalarfield.h"
 #include "pressuresolver.h"
+#include "scalarfield.h"
 
 namespace foc {
 
@@ -431,6 +431,12 @@ void FluidSimulation::advectVelocityFieldW() {
 	}
 }
 
+void FluidSimulation::advectVelocityField() {
+	advectVelocityFieldU();
+	advectVelocityFieldV();
+	advectVelocityFieldW();
+}
+
 void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt) {
 	PressureSolverParameters params;
 	params.cellsize = dcell;
@@ -450,14 +456,151 @@ void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt
 	}
 }
 
-void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt) {
-	// TODO: implement
+void FluidSimulation::applyPressureToFaceU(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
+	double usolid = 0.0;
+	double scale = deltaTime / (density * dcell);
+	double invscale = 1.0 / scale;
+
+	double p0, p1;
+	if (!materialGrid.isCellSolid(i - 1, j, k) && !materialGrid.isCellSolid(i, j, k)) {
+		p0 = pressureGrid(i - 1, j, k);
+		p1 = pressureGrid(i, j, k);
+	} else if (materialGrid.isCellSolid(i - 1, j, k)) {
+		p0 = pressureGrid(i, j, k) - invscale * (macGrid.U(i, j, k) - usolid);
+		p1 = pressureGrid(i, j, k);
+	} else {
+		p0 = pressureGrid(i - 1, j, k);
+		p1 = pressureGrid(i - 1, j, k) - invscale * (macGrid.U(i, j, k) - usolid);
+	}
+
+	double u = macGrid.U(i, j, k) - scale * (p1 - p0);
+	updatedMACGrid.setU(i, j, k, u);
 }
 
-void FluidSimulation::advectVelocityField() {
-	advectVelocityFieldU();
-	advectVelocityFieldV();
-	advectVelocityFieldW();
+void FluidSimulation::applyPressureToFaceV(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
+	double vsolid = 0.0;
+	double scale = deltaTime / (density * dcell);
+	double invscale = 1.0 / scale;
+
+	double p0, p1;
+	if (!materialGrid.isCellSolid(i, j - 1, k) && !materialGrid.isCellSolid(i, j, k)) {
+		p0 = pressureGrid(i, j - 1, k);
+		p1 = pressureGrid(i, j, k);
+	} else if (materialGrid.isCellSolid(i, j - 1, k)) {
+		p0 = pressureGrid(i, j, k) - invscale * (macGrid.V(i, j, k) - vsolid);
+		p1 = pressureGrid(i, j, k);
+	} else {
+		p0 = pressureGrid(i, j - 1, k);
+		p1 = pressureGrid(i, j - 1, k) - invscale * (macGrid.V(i, j, k) - vsolid);
+	}
+
+	double v = macGrid.V(i, j, k) - scale * (p1 - p0);
+	updatedMACGrid.setV(i, j, k, v);
+}
+
+void FluidSimulation::applyPressureToFaceW(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
+	double wsolid = 0.0;
+	double scale = deltaTime / (density * dcell);
+	double invscale = 1.0 / scale;
+
+	double p0, p1;
+	if (!materialGrid.isCellSolid(i, j, k - 1) && !materialGrid.isCellSolid(i, j, k)) {
+		p0 = pressureGrid(i, j, k - 1);
+		p1 = pressureGrid(i, j, k);
+	} else if (materialGrid.isCellSolid(i, j, k - 1)) {
+		p0 = pressureGrid(i, j, k) - invscale * (macGrid.W(i, j, k) - wsolid);
+		p1 = pressureGrid(i, j, k);
+	} else {
+		p0 = pressureGrid(i, j, k - 1);
+		p1 = pressureGrid(i, j, k - 1) - invscale * (macGrid.W(i, j, k) - wsolid);
+	}
+
+	double w = macGrid.W(i, j, k) - scale * (p1 - p0);
+	updatedMACGrid.setW(i, j, k, w);
+}
+
+void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt) {
+	MACGrid updatedMACGrid(isize, jsize, ksize, dcell);
+
+	// TODO: potential for optimization
+	// calculate du, dv, dw values
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize + 1; i++) {
+				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid)) {
+					updatedMACGrid.setU(i, j, k, 0.0);
+				}
+
+				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid)) {
+					applyPressureToFaceU(i, j, k, pressureGrid, updatedMACGrid, dt);
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize + 1; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid)) {
+					updatedMACGrid.setV(i, j, k, 0.0);
+				}
+
+				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid)) {
+					applyPressureToFaceV(i, j, k, pressureGrid, updatedMACGrid, dt);
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize + 1; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid)) {
+					updatedMACGrid.setW(i, j, k, 0.0);
+				}
+
+				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid)) {
+					applyPressureToFaceW(i, j, k, pressureGrid, updatedMACGrid, dt);
+				}
+			}
+		}
+	}
+
+	// add du, dv, dw values back to grid
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize + 1; i++) {
+				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid)) {
+					macGrid.setU(i, j, k, updatedMACGrid.U(i, j, k));
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize; k++) {
+		for (int j = 0; j < jsize + 1; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid)) {
+					macGrid.setV(i, j, k, updatedMACGrid.V(i, j, k));
+				}
+			}
+		}
+	}
+
+	for (int k = 0; k < ksize + 1; k++) {
+		for (int j = 0; j < jsize; j++) {
+			for (int i = 0; i < isize; i++) {
+				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid)) {
+					macGrid.setW(i, j, k, updatedMACGrid.W(i, j, k));
+				}
+			}
+		}
+	}
+}
+
+void FluidSimulation::extrapolateFluidVelocities(MACGrid& velocityGrid) {
+	int numLayers = (int)std::ceil(CFLConditionNumber + 2);
+	velocityGrid.extrapolateVelocityField(materialGrid, numLayers);
 }
 
 double FluidSimulation::getNextTimeStep() {
@@ -493,6 +636,8 @@ void FluidSimulation::stepSimulation(double dt) {
 	Array3D<float> pressureGrid(isize, jsize, ksize, 0.0f);
 	updatePressureGrid(pressureGrid, dt);
 	applyPressureToVelocityField(pressureGrid, dt);
+
+	extrapolateFluidVelocities(macGrid);
 
 	// update (advect) marker particles
 }

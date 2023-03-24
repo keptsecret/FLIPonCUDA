@@ -129,6 +129,18 @@ private:
 	int numElements;
 };
 
+inline bool isGridIndexInRange(Point3i g, Point3i gmax) {
+	return g.x >= 0 && g.y >= 0 && g.z >= 0 && g.x <= gmax.x && g.y <= gmax.y && g.z <= gmax.z;
+}
+
+inline bool isGridIndexInRange(Point3i g, int imax, int jmax, int kmax) {
+	return g.x >= 0 && g.y >= 0 && g.z >= 0 && g.x <= imax && g.y <= jmax && g.z <= kmax;
+}
+
+inline bool isGridIndexInRange(int i, int j, int k, int imax, int jmax, int kmax) {
+	return i >= 0 && j >= 0 && k >= 0 && i <= imax && j <= jmax && k <= kmax;
+}
+
 inline Point3f gridIndexToPosition(int i, int j, int k, double cellsize) {
 	return Point3f(static_cast<double>(i) * cellsize, static_cast<double>(j) * cellsize, static_cast<double>(k) * cellsize);
 }

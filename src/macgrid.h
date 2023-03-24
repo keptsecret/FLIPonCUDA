@@ -1,8 +1,9 @@
 #ifndef FOC_MACGRID_H
 #define FOC_MACGRID_H
 
-#include "foc.h"
 #include "array3d.h"
+#include "cellmaterialgrid.h"
+#include "foc.h"
 
 namespace foc {
 
@@ -47,8 +48,58 @@ public:
 	Vector3f getVelocityAt(double x, double y, double z);
 	Vector3f getVelocityAt(Point3f pos);
 
+	void extrapolateVelocityField(CellMaterialGrid& materialGrid, int numLayers);
+
 private:
 	void initializeVelocityGrids();
+
+	void resetExtrapolatedFluidVelocities(CellMaterialGrid& materialGrid);
+	void updateExtrapolationLayers(CellMaterialGrid& materialGrid, Array3D<int>& layerGrid);
+
+	double getExtrapolatedVelocityForFaceU(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid);
+	double getExtrapolatedVelocityForFaceV(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid);
+	double getExtrapolatedVelocityForFaceW(int i, int j, int k, int layerIdx, Array3D<int>& layerGrid);
+
+	void extrapolateVelocitiesForLayerIndexU(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid);
+	void extrapolateVelocitiesForLayerIndexV(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid);
+	void extrapolateVelocitiesForLayerIndexW(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid);
+	void extrapolateVelocitiesForLayerIndex(int idx, CellMaterialGrid& materialGrid, Array3D<int>& layerGrid);
+
+	template <typename T>
+	bool isFaceBorderingGridValueU(int i, int j, int k, int value, Array3D<T>& grid) {
+		if (i == grid.width) {
+			return grid(i - 1, j, k) == value;
+		} else if (i > 0) {
+			return grid(i - 1, j, k) == value || grid(i, j, k) == value;
+		} else {
+			return grid(i, j, k) == value;
+		}
+	}
+
+	template <typename T>
+	bool isFaceBorderingGridValueV(int i, int j, int k, int value, Array3D<T>& grid) {
+		if (j == grid.height) {
+			return grid(i, j - 1, k) == value;
+		} else if (j > 0) {
+			return grid(i, j - 1, k) == value || grid(i, j, k) == value;
+		} else {
+			return grid(i, j, k) == value;
+		}
+	}
+
+	template <typename T>
+	bool isFaceBorderingGridValueW(int i, int j, int k, int value, Array3D<T>& grid) {
+		if (k == grid.depth) {
+			return grid(i, j, k - 1) == value;
+		} else if (k > 0) {
+			return grid(i, j, k - 1) == value || grid(i, j, k) == value;
+		} else {
+			return grid(i, j, k) == value;
+		}
+	}
+
+private:
+	int numExtrapolationLayers;
 
 	int isize, jsize, ksize;
 	double dcell;

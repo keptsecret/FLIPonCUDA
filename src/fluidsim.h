@@ -36,17 +36,25 @@ private:
 	void addMarkerParticlesToCell(Point3i idx);
 	void addMarkerParticlesToCell(Point3i idx, Vector3f vel);
 
+	// update grid with new marker particle positions and mark fluid cells
 	void removeParticlesInSolidCells();
 	void updateFluidCells();
 
+	// advect velocity field with new marker particles
 	void computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir);
 	void advectVelocityFieldU();
 	void advectVelocityFieldV();
 	void advectVelocityFieldW();
 	void advectVelocityField();
 
+	// update and apply pressure
 	void updatePressureGrid(Array3D<float>& pressureGrid, double dt);
+	void applyPressureToFaceU(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime);
+	void applyPressureToFaceV(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime);
+	void applyPressureToFaceW(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime);
 	void applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt);
+
+	void extrapolateFluidVelocities(MACGrid& velocityGrid);
 
 	double getNextTimeStep();
 	double getMaxParticleSpeed();
