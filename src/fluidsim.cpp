@@ -79,6 +79,26 @@ void FluidSimulation::addFluidCuboid(double x, double y, double z, double w, dou
 	addFluidCuboid(Point3f(x, y, z), Point3f(x + w, y + h, z + d));
 }
 
+void FluidSimulation::addBodyForce(double fx, double fy, double fz) {
+	addBodyForce(Vector3f(fx, fy, fz));
+}
+
+void FluidSimulation::addBodyForce(Vector3f f) {
+	constantBodyForces.push_back(f);
+}
+
+void FluidSimulation::resetBodyForce() {
+	constantBodyForces.clear();
+}
+
+Vector3f FluidSimulation::getConstantBodyForce() {
+	Vector3f total;
+	for (const auto& bf : constantBodyForces) {
+		total += bf;
+	}
+	return total;
+}
+
 void FluidSimulation::initializeGrids(int i, int j, int k, int cellsize) {
 	macGrid = MACGrid(i, j, k, cellsize);
 	materialGrid = CellMaterialGrid(i, j, k);
@@ -437,6 +457,46 @@ void FluidSimulation::advectVelocityField() {
 	advectVelocityFieldW();
 }
 
+void FluidSimulation::applyConstantBodyForces(double dt) {
+	Vector3f totalBodyForce = getConstantBodyForce();
+
+	if (fabs(totalBodyForce.x) > 0.0) {
+		for (int k = 0; k < ksize; k++) {
+			for (int j = 0; j < jsize; j++) {
+				for (int i = 0; i < isize + 1; i++) {
+					if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid)) {
+						macGrid.setU(i, j, k, macGrid.U(i, j, k) + totalBodyForce.x * dt);
+					}
+				}
+			}
+		}
+
+		for (int k = 0; k < ksize; k++) {
+			for (int j = 0; j < jsize + 1; j++) {
+				for (int i = 0; i < isize; i++) {
+					if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid)) {
+						macGrid.setV(i, j, k, macGrid.V(i, j, k) + totalBodyForce.y * dt);
+					}
+				}
+			}
+		}
+
+		for (int k = 0; k < ksize + 1; k++) {
+			for (int j = 0; j < jsize; j++) {
+				for (int i = 0; i < isize; i++) {
+					if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid)) {
+						macGrid.setW(i, j, k, macGrid.U(i, j, k) + totalBodyForce.z * dt);
+					}
+				}
+			}
+		}
+	}
+}
+
+void FluidSimulation::applyBodyForcesToVelocityField(double dt) {
+	applyConstantBodyForces(dt);
+}
+
 void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt) {
 	PressureSolverParameters params;
 	params.cellsize = dcell;
@@ -631,6 +691,9 @@ void FluidSimulation::stepSimulation(double dt) {
 
 	// advect velocity field with new marker particles
 	advectVelocityField();
+
+	// apply body forces, e.g. gravity
+	applyBodyForcesToVelocityField(dt);
 
 	// update and apply pressure
 	Array3D<float> pressureGrid(isize, jsize, ksize, 0.0f);

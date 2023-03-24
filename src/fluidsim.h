@@ -25,6 +25,13 @@ public:
 	void addFluidCuboid(Point3f pmin, Point3f pmax);
 	void addFluidCuboid(double x, double y, double z, double w, double h, double d);
 
+	// constant body force
+	void addBodyForce(double fx, double fy, double fz);
+	void addBodyForce(Vector3f f);
+	void resetBodyForce();
+
+	Vector3f getConstantBodyForce();
+
 private:
 	void initializeGrids(int i, int j, int k, int cellsize);
 	void initializeVectors(int i, int j, int k);
@@ -47,6 +54,10 @@ private:
 	void advectVelocityFieldW();
 	void advectVelocityField();
 
+	// apply body forces, e.g. gravity
+	void applyConstantBodyForces(double dt);
+	void applyBodyForcesToVelocityField(double dt);
+
 	// update and apply pressure
 	void updatePressureGrid(Array3D<float>& pressureGrid, double dt);
 	void applyPressureToFaceU(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime);
@@ -55,6 +66,10 @@ private:
 	void applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt);
 
 	void extrapolateFluidVelocities(MACGrid& velocityGrid);
+
+	// update (advect) marker particles
+	void updateMarkerParticleVelocities();
+
 
 	double getNextTimeStep();
 	double getMaxParticleSpeed();
@@ -82,12 +97,13 @@ private:
 	bool isInitialized = false;
 	double gravity = -9.81;
 	double density = 1000.0;
-	double ratioFLIPPIC = 0.95;
 	FOC_CONST double CFLConditionNumber = 5.0; // maximum number of cells a particle can move
 	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
 	int maxParticlesPerVelocityAdvection = 5e6;
+	double ratioFLIPPIC = 0.95;
+	int maxParticlesPerFLIPPICUpdate = 10e6;
 
 	int isize, jsize, ksize;
 	double dcell;
@@ -98,6 +114,8 @@ private:
 
 	std::vector<FluidPoint> fluidPoints;
 	std::vector<FluidCuboid> fluidCuboids;
+
+	std::vector<Vector3f> constantBodyForces;
 
 	std::vector<Point3i> fluidCellIndices;
 	std::vector<MarkerParticle> markerParticles;
