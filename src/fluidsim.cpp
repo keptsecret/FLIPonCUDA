@@ -2,6 +2,7 @@
 
 #include "pressuresolver.h"
 #include "scalarfield.h"
+#include <chrono>
 
 namespace foc {
 
@@ -11,8 +12,8 @@ FluidSimulation::FluidSimulation() :
 
 FluidSimulation::FluidSimulation(int width, int height, int depth, double cellsize) :
 		isize(width), jsize(height), ksize(depth), dcell(cellsize) {
-	initializeGrids(width, height, depth, cellsize);
-	initializeVectors(width, height, depth);
+	initializeGrids(isize, jsize, ksize, dcell);
+	initializeVectors(isize, jsize, ksize);
 }
 
 void FluidSimulation::initialize() {
@@ -46,6 +47,8 @@ void FluidSimulation::simulate(double fps, int numFrames) {
 }
 
 void FluidSimulation::update(double dt) {
+	auto start = std::chrono::steady_clock::now();
+
 	isCurrentFrameFinished = false;
 
 	double timeleft = dt;
@@ -61,6 +64,10 @@ void FluidSimulation::update(double dt) {
 
 	currentFrame++;
 	isCurrentFrameFinished = true;
+
+	auto end = std::chrono::steady_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end - start;
+	std::cout << "Frame " << currentFrame << ":: elapsed time: " << elapsed_seconds.count() << "s\n";
 }
 
 void FluidSimulation::addFluidPoint(double x, double y, double z, double r) {
@@ -99,7 +106,7 @@ Vector3f FluidSimulation::getConstantBodyForce() {
 	return total;
 }
 
-void FluidSimulation::initializeGrids(int i, int j, int k, int cellsize) {
+void FluidSimulation::initializeGrids(int i, int j, int k, double cellsize) {
 	macGrid = MACGrid(i, j, k, cellsize);
 	materialGrid = CellMaterialGrid(i, j, k);
 }

@@ -7,7 +7,7 @@ MACGrid::MACGrid() :
 	initializeVelocityGrids();
 }
 
-MACGrid::MACGrid(int width, int height, int depth, int cellsize) :
+MACGrid::MACGrid(int width, int height, int depth, double cellsize) :
 		isize(width), jsize(height), ksize(depth), dcell(cellsize) {
 	initializeVelocityGrids();
 }

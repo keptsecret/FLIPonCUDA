@@ -11,7 +11,7 @@ class MACGrid {
 public:
 	MACGrid();
 
-	MACGrid(int width, int height, int depth, int cellsize);
+	MACGrid(int width, int height, int depth, double cellsize);
 
 	~MACGrid() {}
 

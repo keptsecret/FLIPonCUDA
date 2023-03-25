@@ -34,7 +34,7 @@ public:
 	Vector3f getConstantBodyForce();
 
 private:
-	void initializeGrids(int i, int j, int k, int cellsize);
+	void initializeGrids(int i, int j, int k, double cellsize);
 	void initializeVectors(int i, int j, int k);
 
 	void initializeSolidCells();
