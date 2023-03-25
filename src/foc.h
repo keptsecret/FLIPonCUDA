@@ -96,6 +96,10 @@ inline double randomDouble(double min_val, double max_val) {
 	return min_val + (double)rand() / ((double)RAND_MAX / (max_val - min_val));
 }
 
+inline float gamma(int n) {
+	return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
+}
+
 } // namespace foc
 
 #endif // FOC_H
