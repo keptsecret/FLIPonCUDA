@@ -589,6 +589,13 @@ public:
 		*radius = bInside(*center, *this) ? distance(*center, p_max) : 0;
 	}
 
+
+	FOC_CPU_GPU
+	bool intersectP(Point3f o, Vector3f d, float t_max = Infinity, float* hitt0 = nullptr, float* hitt1 = nullptr) const;
+
+	FOC_CPU_GPU
+	bool intersectP(Point3f o, Vector3f d, float t_max, Vector3f& inv_dir, const int dir_is_neg[3]) const;
+
 public:
 
 	Point3<T> p_min, p_max;
@@ -880,6 +887,74 @@ FOC_CPU_GPU inline bool bInsideExclusive(const Point3<T>& p, const Bounds3<T>& b
 template <typename T, typename U>
 FOC_CPU_GPU inline bool bExpand(const Bounds3<T>& b, U delta) {
 	return Bounds3<T>(b.p_min - Vector3<T>(delta, delta, delta), b.p_max + Vector3<T>(delta, delta, delta));
+}
+
+template <typename T>
+FOC_CPU_GPU inline bool Bounds3<T>::intersectP(Point3f o, Vector3f d, float t_max, float* hitt0, float* hitt1) const {
+	float t0 = 0, t1 = t_max;
+	for (int i = 0; i < 3; i++) {
+		float inv_dir = 1 / d[i];
+		float t_near = (p_min[i] - o[i]) * inv_dir;
+		float t_far = (p_max[i] - o[i]) * inv_dir;
+
+		if (t_near > t_far) {
+			float tmp = t_near;
+			t_near = t_far;
+			t_far = tmp;
+		}
+		t_far *= 1 + 2 * gamma(3);
+		t0 = t_near > t0 ? t_near : t0;
+		t1 = t_far < t1 ? t_far : t1;
+		if (t0 > t1) {
+			return false;
+		}
+	}
+	if (hitt0) {
+		*hitt0 = t0;
+	}
+	if (hitt1) {
+		*hitt1 = t1;
+	}
+	return true;
+}
+
+template <typename T>
+FOC_CPU_GPU inline bool Bounds3<T>::intersectP(Point3f o, Vector3f d, float ray_t_max, Vector3f& inv_dir, const int dir_is_neg[3]) const {
+	const Bounds3f& bounds = *this;
+	float t_min = (bounds[dir_is_neg[0]].x - o.x) * inv_dir.x;
+	float t_max = (bounds[1 - dir_is_neg[0]].x - o.x) * inv_dir.x;
+	float ty_min = (bounds[dir_is_neg[1]].y - o.y) * inv_dir.y;
+	float ty_max = (bounds[1 - dir_is_neg[1]].y - o.y) * inv_dir.y;
+
+	t_max *= 1 + 2 * gamma(3);
+	ty_max *= 1 + 2 * gamma(3);
+
+	if (t_min > ty_max || ty_min > t_max) {
+		return false;
+	}
+	if (ty_min > t_min) {
+		t_min = ty_min;
+	}
+	if (ty_max < t_max) {
+		t_max = ty_min;
+	}
+
+	float tz_min = (bounds[dir_is_neg[2]].z - o.z) * inv_dir.z;
+	float tz_max = (bounds[1 - dir_is_neg[2]].z - o.z) * inv_dir.z;
+
+	tz_max *= 1 + 2 * gamma(3);
+
+	if (t_min > tz_max || tz_min > t_max) {
+		return false;
+	}
+	if (tz_min > t_min) {
+		t_min = tz_min;
+	}
+	if (tz_max < t_max) {
+		t_max = tz_min;
+	}
+
+	return (t_min < ray_t_max) && (t_max > 0);
 }
 
 } // namespace foc
