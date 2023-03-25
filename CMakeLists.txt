@@ -17,6 +17,11 @@ endif()
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+########################################
+# thirdparty libraries
+
+add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty)
+
 ###########################################################################
 # CUDA
 
@@ -92,6 +97,8 @@ set_property ( TARGET flipfluidsim_lib PROPERTY CUDA_ARCHITECTURES all-major )
 
 target_include_directories( flipfluidsim_lib PUBLIC
         src
+        src/thirdparty
+        ${OPENVDB_INCLUDE}
         )
 
 target_compile_options ( flipfluidsim_lib PUBLIC ${FOC_CXX_FLAGS} )
@@ -104,6 +111,7 @@ endif()
 
 set ( ALL_FOC_LIBS
         flipfluidsim_lib
+        openvdb_static
         )
 
 if (CUDA_ENABLED)
