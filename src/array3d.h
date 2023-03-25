@@ -25,7 +25,7 @@ public:
 		fill(fillval);
 	}
 
-	Array3D operator=(const Array3D& arr) {
+	Array3D<T>& operator=(const Array3D<T>& arr) {
 		delete[] grid;
 
 		width = arr.width;
