@@ -664,6 +664,135 @@ void FluidSimulation::extrapolateFluidVelocities(MACGrid& velocityGrid) {
 	velocityGrid.extrapolateVelocityField(materialGrid, numLayers);
 }
 
+void FluidSimulation::updateMarkerParticleVelocitiesSubset(int start, int end) {
+	int size = end - start + 1;
+	std::vector<Point3f> positions(size);
+	std::vector<Vector3f> velocityNew(size);
+	std::vector<Vector3f> velocityOld(size);
+
+	for (int idx = start; idx <= end; idx++) {
+		positions.push_back(markerParticles[idx].position);
+	}
+
+	particleAdvector.tricubicInterpolate(positions, &macGrid, velocityNew);
+	particleAdvector.tricubicInterpolate(positions, &prevMACGrid, velocityOld);
+
+	for (int i = 0; i < positions.size(); i++) {
+		MarkerParticle mp = markerParticles[start + i];
+
+		Vector3f vPIC = velocityNew[i];
+		Vector3f vFLIP = mp.velocity + velocityNew[i] - velocityOld[i];
+
+		Vector3f v = vFLIP * ratioFLIPPIC + vPIC * (1 - ratioFLIPPIC);
+		markerParticles[start + i].velocity = v;
+	}
+}
+
+void FluidSimulation::updateMarkerParticleVelocities() {
+	for (int start = 0; start < markerParticles.size(); start += maxParticlesPerFLIPPICUpdate) {
+		int end = start + maxParticlesPerFLIPPICUpdate - 1;
+		end = fmin(end, markerParticles.size() - 1);
+
+		updateMarkerParticleVelocitiesSubset(start, end);
+	}
+}
+
+void FluidSimulation::advanceMarkerParticlesSubset(int start, int end, double dt) {
+	std::vector<Point3f> positions(end - start + 1);
+	for (int i = start; i <= end; i++) {
+		positions.push_back(markerParticles[i].position);
+	}
+
+	std::vector<Point3f> output;
+	particleAdvector.advectParticles(positions, &macGrid, dt, output);
+
+	for (int i = 0; i < output.size(); i++) {
+		MarkerParticle mp = markerParticles[start + i];
+		Point3f nextpos = output[i];
+
+		Point3i idx = positionToGridIndex(nextpos.x, nextpos.y, nextpos.z, dcell);
+		if (materialGrid.isCellSolid(idx.x, idx.y, idx.z)) {
+			nextpos = resolveParticleSolidCollision(mp.position, nextpos);
+		}
+
+		markerParticles[start + i].position = nextpos;
+	}
+}
+
+void FluidSimulation::removeMarkerParticles() {
+	for (int i = markerParticles.size() - 2; i >= 0; i--) {
+		int j = (rand() % (i - 0 + 1));
+		MarkerParticle tmp = markerParticles[i];
+		markerParticles[i] = markerParticles[j];
+		markerParticles[j] = tmp;
+	}
+
+	std::vector<bool> isRemoved(markerParticles.size());
+	Array3D<int> countGrid(isize, jsize, ksize, 0);
+	for (int i = 0; i < markerParticles.size(); i++) {
+		MarkerParticle mp = markerParticles[i];
+		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
+		if (countGrid(idx.x, idx.y, idx.z) >= maxMarkerParticlesPerCell) {
+			isRemoved.push_back(true);
+			continue;
+		}
+		countGrid.set(idx.x, idx.y, idx.z, countGrid(idx.x, idx.y, idx.z) + 1);
+		isRemoved.push_back(false);
+	}
+
+	markerParticles.erase(std::remove_if(markerParticles.begin(), markerParticles.end(),
+								  [&isRemoved, &markerParticles = markerParticles](auto const& i) {
+									  return isRemoved.at(&i - markerParticles.data());
+								  }),
+			markerParticles.end());
+	markerParticles.shrink_to_fit();
+}
+
+Point3f FluidSimulation::resolveParticleSolidCollision(Point3f oldpos, Point3f newpos) {
+	Point3i oldidx = positionToGridIndex(oldpos.x, oldpos.y, oldpos.z, dcell);
+	Point3i newidx = positionToGridIndex(newpos.x, newpos.y, newpos.z, dcell);
+	if (!materialGrid.isCellSolid(oldidx.x, oldidx.y, oldidx.z) || materialGrid.isCellSolid(newidx.x, newidx.y, newidx.z)) {
+		return oldpos;
+	}
+
+	Point3i voxel;
+	bool foundVoxel = getLineSegmentVoxelIntersection(oldpos, newpos, dcell, materialGrid, &voxel);
+
+	if (!foundVoxel) {
+		return oldpos;
+	}
+
+	Vector3f line = normalize(newpos - oldpos);
+	Point3f voxelpos = gridIndexToPosition(voxel.x, voxel.y, voxel.z, dcell);
+	Bounds3f bbox(voxelpos, Point3f(voxelpos.x + dcell, voxelpos.y + dcell, voxelpos.z + dcell));
+
+	float t0, t1;
+	if (!bbox.intersectP(oldpos, line, Infinity, &t0, &t1)) {
+		return oldpos;
+	}
+
+	Point3f isectP = oldpos + line * t0;
+	Point3f resolvedP = isectP - line * 0.05f * dcell;
+
+	Point3i resolvedidx = positionToGridIndex(resolvedP.x, resolvedP.y, resolvedP.z, dcell);
+	if (materialGrid.isCellSolid(resolvedidx.x, resolvedidx.y, resolvedidx.z)) {
+		return oldpos;
+	}
+
+	return resolvedP;
+}
+
+void FluidSimulation::advanceMarkerParticles(double dt) {
+	for (int start = 0; start < markerParticles.size(); start += maxParticlesPerFLIPPICUpdate) {
+		int end = start + maxParticlesPerFLIPPICUpdate - 1;
+		end = fmin(end, markerParticles.size() - 1);
+
+		advanceMarkerParticlesSubset(start, end, dt);
+	}
+
+	removeMarkerParticles();
+}
+
 double FluidSimulation::getNextTimeStep() {
 	double maxv = getMaxParticleSpeed();
 	double ts = CFLConditionNumber * dcell / maxv;
@@ -692,6 +821,8 @@ void FluidSimulation::stepSimulation(double dt) {
 
 	// advect velocity field with new marker particles
 	advectVelocityField();
+	prevMACGrid = macGrid;
+	extrapolateFluidVelocities(prevMACGrid);
 
 	// apply body forces, e.g. gravity
 	applyBodyForcesToVelocityField(dt);
@@ -703,7 +834,9 @@ void FluidSimulation::stepSimulation(double dt) {
 
 	extrapolateFluidVelocities(macGrid);
 
-	// update (advect) marker particles
+	// update and advect marker particles
+	updateMarkerParticleVelocities();
+	advanceMarkerParticles(dt);
 }
 
 } // namespace foc

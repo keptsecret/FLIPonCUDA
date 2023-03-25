@@ -58,6 +58,7 @@ set( FOC_HEADERS
         src/cellmaterialgrid.h
         src/scalarfield.h
         src/pressuresolver.h
+        src/particleadvector.h
         src/fluidsim.h
         )
 
@@ -66,6 +67,7 @@ set( FOC_SOURCE
         src/cellmaterialgrid.cpp
         src/scalarfield.cpp
         src/pressuresolver.cpp
+        src/particleadvector.cpp
         src/fluidsim.cpp
         )
 

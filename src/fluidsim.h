@@ -5,6 +5,7 @@
 #include "foc.h"
 #include "macgrid.h"
 #include "markerparticle.h"
+#include "particleadvector.h"
 
 namespace foc {
 
@@ -68,8 +69,12 @@ private:
 	void extrapolateFluidVelocities(MACGrid& velocityGrid);
 
 	// update (advect) marker particles
+	void updateMarkerParticleVelocitiesSubset(int start, int end);
 	void updateMarkerParticleVelocities();
-
+	void advanceMarkerParticlesSubset(int start, int end, double dt);
+	void removeMarkerParticles();
+	Point3f resolveParticleSolidCollision(Point3f oldpos, Point3f newpos);
+	void advanceMarkerParticles(double dt);
 
 	double getNextTimeStep();
 	double getMaxParticleSpeed();
@@ -104,6 +109,7 @@ private:
 	int maxParticlesPerVelocityAdvection = 5e6;
 	double ratioFLIPPIC = 0.95;
 	int maxParticlesPerFLIPPICUpdate = 10e6;
+	int maxMarkerParticlesPerCell = 100;
 
 	int isize, jsize, ksize;
 	double dcell;
@@ -117,9 +123,12 @@ private:
 
 	std::vector<Vector3f> constantBodyForces;
 
+	ParticleAdvector particleAdvector;
+
 	std::vector<Point3i> fluidCellIndices;
 	std::vector<MarkerParticle> markerParticles;
 	MACGrid macGrid;
+	MACGrid prevMACGrid;
 	CellMaterialGrid materialGrid;
 };
 
