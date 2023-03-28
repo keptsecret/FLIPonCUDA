@@ -18,6 +18,8 @@ public:
 
 	~FluidSimulation() {}
 
+	void getSimulationDimensions(double* width, double* height, double* depth);
+
 	void initialize();
 	void simulate(double fps, int numFrames);
 	void update(double dt);

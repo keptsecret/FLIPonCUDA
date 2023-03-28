@@ -17,6 +17,12 @@ FluidSimulation::FluidSimulation(int width, int height, int depth, double cellsi
 	initializeVectors(isize, jsize, ksize);
 }
 
+void FluidSimulation::getSimulationDimensions(double* width, double* height, double* depth) {
+	*width = (double)isize * dcell;
+	*height = (double)jsize * dcell;
+	*depth = (double)ksize * dcell;
+}
+
 void FluidSimulation::initialize() {
 	if (!isInitialized) {
 		srand(randomSeed);
@@ -141,7 +147,7 @@ void FluidSimulation::initializeSolidCells() {
 
 void FluidSimulation::initializeFluid() {
 	// turn fluid points and cuboids into a scalar field
-	ScalarField field = ScalarField(isize + 1, jsize + 1, ksize + 1, dcell);
+	ScalarField field(isize + 1, jsize + 1, ksize + 1, dcell);
 	for (auto& fp : fluidPoints) {
 		field.addPoint(fp.position, fp.radius);
 	}
@@ -217,7 +223,8 @@ void FluidSimulation::addMarkerParticlesToCell(Point3i idx, Vector3f vel) {
 
 void FluidSimulation::removeParticlesInSolidCells() {
 	// removes marker particles in solid cells
-	std::vector<bool> isRemoved(markerParticles.size());
+	std::vector<bool> isRemoved;
+	isRemoved.reserve(markerParticles.size());
 
 	bool hasParticleInSolidCell = false;
 	for (auto& mp : markerParticles) {
@@ -354,7 +361,7 @@ void FluidSimulation::smoothSurfaceMesh(TriangleMesh& mesh) {
 }
 
 void FluidSimulation::exportMeshToFile(TriangleMesh& mesh, std::string filename) {
-	mesh.writeMeshToBOBJ(filename);
+	mesh.writeMeshToPLY(filename);
 }
 
 void FluidSimulation::reconstructFluidSurfaceMesh() {
@@ -368,7 +375,7 @@ void FluidSimulation::reconstructFluidSurfaceMesh() {
 	std::string framestr = std::to_string(currentFrame);
 	framestr.insert(framestr.begin(), 6 - framestr.size(), '0');
 	std::string bakedir = "cache";
-	std::string ext = ".bobj";
+	std::string ext = ".ply";
 	std::string isofile = bakedir + "/" + framestr + ext;
 	exportMeshToFile(isoMesh, isofile);
 }
@@ -431,7 +438,8 @@ void FluidSimulation::advectVelocityFieldU() {
 	Array3D<bool> isValueSet = Array3D<bool>(isize + 1, jsize, ksize, false);
 	computeVelocityField(uvel, isValueSet, 0);
 
-	std::vector<Point3i> extrapolationIndices((isize + 1) * jsize * ksize);
+	std::vector<Point3i> extrapolationIndices;
+	extrapolationIndices.reserve((isize+1) * jsize * ksize);
 	for (int k = 0; k < uvel.depth; k++) {
 		for (int j = 0; j < uvel.height; j++) {
 			for (int i = 0; i < uvel.width; i++) {
@@ -472,7 +480,8 @@ void FluidSimulation::advectVelocityFieldV() {
 	Array3D<bool> isValueSet = Array3D<bool>(isize, jsize + 1, ksize, false);
 	computeVelocityField(vvel, isValueSet, 1);
 
-	std::vector<Point3i> extrapolationIndices(isize * (jsize + 1) * ksize);
+	std::vector<Point3i> extrapolationIndices;
+	extrapolationIndices.reserve(isize * (jsize+1) * ksize);
 	for (int k = 0; k < vvel.depth; k++) {
 		for (int j = 0; j < vvel.height; j++) {
 			for (int i = 0; i < vvel.width; i++) {
@@ -513,7 +522,8 @@ void FluidSimulation::advectVelocityFieldW() {
 	Array3D<bool> isValueSet = Array3D<bool>(isize, jsize, ksize + 1, false);
 	computeVelocityField(wvel, isValueSet, 2);
 
-	std::vector<Point3i> extrapolationIndices(isize * jsize * (ksize + 1));
+	std::vector<Point3i> extrapolationIndices;
+	extrapolationIndices.reserve(isize * jsize * (ksize + 1));
 	for (int k = 0; k < wvel.depth; k++) {
 		for (int j = 0; j < wvel.height; j++) {
 			for (int i = 0; i < wvel.width; i++) {
@@ -761,9 +771,11 @@ void FluidSimulation::extrapolateFluidVelocities(MACGrid& velocityGrid) {
 
 void FluidSimulation::updateMarkerParticleVelocitiesSubset(int start, int end) {
 	int size = end - start + 1;
-	std::vector<Point3f> positions(size);
-	std::vector<Vector3f> velocityNew(size);
-	std::vector<Vector3f> velocityOld(size);
+	std::vector<Point3f> positions;
+	positions.reserve(size);
+	std::vector<Vector3f> velocityNew, velocityOld;
+	velocityNew.reserve(size);
+	velocityOld.reserve(size);
 
 	for (int idx = start; idx <= end; idx++) {
 		positions.push_back(markerParticles[idx].position);
@@ -793,7 +805,8 @@ void FluidSimulation::updateMarkerParticleVelocities() {
 }
 
 void FluidSimulation::advanceMarkerParticlesSubset(int start, int end, double dt) {
-	std::vector<Point3f> positions(end - start + 1);
+	std::vector<Point3f> positions;
+	positions.reserve(end - start + 1);
 	for (int i = start; i <= end; i++) {
 		positions.push_back(markerParticles[i].position);
 	}
