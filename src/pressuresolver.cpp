@@ -86,7 +86,7 @@ void PressureSolver::solve(PressureSolverParameters params, VectorXd& pressure) 
 
 	pressure.fill(0.0);
 
-	keymap.reserve(isize * jsize * ksize);
+	keymap.resize(isize * jsize * ksize);
 	for (int i = 0; i < fluidCells->size(); i++) {
 		Point3i idx = fluidCells->at(i);
 		keymap[getFlatIndex(idx.x, idx.y, idx.z)] = i;

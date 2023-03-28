@@ -5,8 +5,8 @@ namespace foc {
 ScalarField::ScalarField() {
 }
 
-ScalarField::ScalarField(int i, int j, int k, int cellsize) :
-		isize(i), jsize(j), ksize(k), cellsize(cellsize), field(i, j, k, false), isVertexSolid(i, j, k), isVertexSet(i, j, k, false) {
+ScalarField::ScalarField(int i, int j, int k, double dx) :
+		isize(i), jsize(j), ksize(k), cellsize(dx), field(i, j, k, false), isVertexSolid(i, j, k, false), isVertexSet(i, j, k, false) {
 }
 
 void ScalarField::setPointRadius(double r) {
