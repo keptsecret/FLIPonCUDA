@@ -25,6 +25,25 @@ public:
 		fill(fillval);
 	}
 
+	Array3D(const Array3D<T>& arr) {
+		width = arr.width;
+		height = arr.height;
+		depth = arr.depth;
+		numElements = arr.numElements;
+
+		initializeGrid();
+
+		T val;
+		for (int k = 0; k < depth; k++) {
+			for (int j = 0; j < height; j++) {
+				for (int i = 0; i < width; i++) {
+					val = arr.grid[getFlattenedIndex(i, j, k)];
+					set(i, j, k, val);
+				}
+			}
+		}
+	}
+
 	Array3D<T>& operator=(const Array3D<T>& arr) {
 		delete[] grid;
 
