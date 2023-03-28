@@ -19,6 +19,158 @@ void TriangleMesh::clear() {
 	vertexTriangles.clear();
 }
 
+void TriangleMesh::writeMeshToPLY(std::string filename) {
+	// Header format:
+	/*
+		ply
+		format binary_little_endian 1.0
+		element vertex FILL_IN_NUMBER_OF_VERTICES
+		property float x
+		property float y
+		property float z
+		element face FILL_IN_NUMBER_OF_FACES
+		property list uchar int vertex_index
+		end_header
+	*/
+
+	char header1[51] = { 'p', 'l', 'y', '\n',
+		'f', 'o', 'r', 'm', 'a', 't', ' ', 'b', 'i', 'n', 'a', 'r', 'y', '_', 'l',
+		'i', 't', 't', 'l', 'e', '_', 'e', 'n', 'd', 'i', 'a', 'n', ' ', '1', '.', '0', '\n',
+		'e', 'l', 'e', 'm', 'e', 'n', 't', ' ', 'v', 'e', 'r', 't', 'e', 'x', ' ' };
+
+	char header2[65] = { '\n', 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'x', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'y', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'z', '\n',
+		'e', 'l', 'e', 'm', 'e', 'n', 't', ' ', 'f', 'a', 'c', 'e', ' ' };
+
+	char header2color[125] = { '\n', 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'x', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'y', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'f', 'l', 'o', 'a', 't', ' ', 'z', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'u', 'c', 'h', 'a', 'r', ' ', 'r', 'e', 'd', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'u', 'c', 'h', 'a', 'r', ' ', 'g', 'r', 'e', 'e', 'n', '\n',
+		'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'u', 'c', 'h', 'a', 'r', ' ', 'b', 'l', 'u', 'e', '\n',
+		'e', 'l', 'e', 'm', 'e', 'n', 't', ' ', 'f', 'a', 'c', 'e', ' ' };
+
+	char header3[49] = { '\n', 'p', 'r', 'o', 'p', 'e', 'r', 't', 'y', ' ', 'l', 'i', 's', 't', ' ',
+		'u', 'c', 'h', 'a', 'r', ' ', 'i', 'n', 't', ' ',
+		'v', 'e', 'r', 't', 'e', 'x', '_', 'i', 'n', 'd', 'e', 'x', '\n',
+		'e', 'n', 'd', '_', 'h', 'e', 'a', 'd', 'e', 'r', '\n' };
+
+	bool isColorEnabled = vertices.size() == vertexcolors.size();
+
+	std::string vertstring = std::to_string(vertices.size());
+	std::string facestring = std::to_string(indices.size());
+	int vertdigits = (int)vertstring.length();
+	int facedigits = (int)facestring.length();
+
+	int offset = 0;
+	int headersize;
+	if (isColorEnabled) {
+		headersize = 51 + vertdigits + 125 + facedigits + 49;
+	} else {
+		headersize = 51 + vertdigits + 65 + facedigits + 49;
+	}
+
+	int binsize;
+	if (isColorEnabled) {
+		binsize = headersize + 3 * (sizeof(float) * (int)vertices.size() + sizeof(unsigned char) * (int)vertices.size()) + (sizeof(unsigned char) + 3 * sizeof(int)) * (int)indices.size();
+	} else {
+		binsize = headersize + 3 * sizeof(float) * (int)vertices.size() + (sizeof(unsigned char) + 3 * sizeof(int)) * (int)indices.size();
+	}
+	char* bin = new char[binsize];
+
+	memcpy(bin + offset, header1, 51);
+	offset += 51;
+	memcpy(bin + offset, vertstring.c_str(), vertdigits * sizeof(char));
+	offset += vertdigits * sizeof(char);
+
+	if (isColorEnabled) {
+		memcpy(bin + offset, header2color, 125);
+		offset += 125;
+	} else {
+		memcpy(bin + offset, header2, 65);
+		offset += 65;
+	}
+
+	memcpy(bin + offset, facestring.c_str(), facedigits * sizeof(char));
+	offset += facedigits * sizeof(char);
+	memcpy(bin + offset, header3, 49);
+	offset += 49;
+
+	if (isColorEnabled) {
+		float* vertdata = new float[3 * vertices.size()];
+		Point3f v;
+		for (unsigned int i = 0; i < vertices.size(); i++) {
+			v = vertices[i];
+			vertdata[3 * i] = v.x;
+			vertdata[3 * i + 1] = v.y;
+			vertdata[3 * i + 2] = v.z;
+		}
+
+		unsigned char* colordata = new unsigned char[3 * vertexcolors.size()];
+		Point3f c;
+		for (unsigned int i = 0; i < vertexcolors.size(); i++) {
+			c = vertexcolors[i];
+			colordata[3 * i] = (unsigned char)((c.x / 1.0) * 255.0);
+			colordata[3 * i + 1] = (unsigned char)((c.y / 1.0) * 255.0);
+			colordata[3 * i + 2] = (unsigned char)((c.z / 1.0) * 255.0);
+		}
+
+		int vertoffset = 0;
+		int coloroffset = 0;
+		int vertsize = 3 * sizeof(float);
+		int colorsize = 3 * sizeof(unsigned char);
+		for (unsigned int i = 0; i < vertices.size(); i++) {
+			memcpy(bin + offset, vertdata + vertoffset, vertsize);
+			offset += vertsize;
+			vertoffset += 3;
+
+			memcpy(bin + offset, colordata + coloroffset, colorsize);
+			offset += colorsize;
+			coloroffset += 3;
+		}
+
+		delete[] colordata;
+		delete[] vertdata;
+	} else {
+		float* vertdata = new float[3 * vertices.size()];
+		Point3f v;
+		for (unsigned int i = 0; i < vertices.size(); i++) {
+			v = vertices[i];
+			vertdata[3 * i] = v.x;
+			vertdata[3 * i + 1] = v.y;
+			vertdata[3 * i + 2] = v.z;
+		}
+		memcpy(bin + offset, vertdata, 3 * sizeof(float) * vertices.size());
+		offset += 3 * sizeof(float) * (int)vertices.size();
+		delete[] vertdata;
+	}
+
+	int verts[3];
+	for (unsigned int i = 0; i < indices.size(); i++) {
+		Point3i t = indices[i];
+		verts[0] = t[0];
+		verts[1] = t[1];
+		verts[2] = t[2];
+
+		bin[offset] = 0x03;
+		offset += sizeof(unsigned char);
+
+		memcpy(bin + offset, verts, 3 * sizeof(int));
+		offset += 3 * sizeof(int);
+	}
+
+	std::ofstream erasefile;
+	erasefile.open(filename.c_str(), std::ofstream::out | std::ofstream::trunc);
+	erasefile.close();
+
+	std::ofstream file(filename.c_str(), std::ios::out | std::ios::binary);
+	file.write(bin, binsize);
+	file.close();
+
+	delete[] bin;
+}
+
 void TriangleMesh::writeMeshToBOBJ(std::string filename) {
 	std::ofstream erasefile;
 	erasefile.open(filename, std::ofstream::out | std::ofstream::trunc);
@@ -46,7 +198,7 @@ void TriangleMesh::updateVertexTriangles() {
 	vertexTriangles.reserve(vertices.size());
 
 	for (int i = 0; i < vertices.size(); i++) {
-		std::vector<int> triangles(14);	// 14 is the maximum number of adjacent triangles to a vertex
+		std::vector<int> triangles(14); // 14 is the maximum number of adjacent triangles to a vertex
 		vertexTriangles.push_back(triangles);
 	}
 
@@ -62,7 +214,8 @@ void TriangleMesh::updateVertexNormals() {
 	normals.clear();
 	updateVertexTriangles();
 
-	std::vector<Vector3f> faceNormals(indices.size());
+	std::vector<Vector3f> faceNormals;
+	faceNormals.reserve(indices.size());
 	for (int i = 0; i < indices.size(); i++) {
 		Point3i t = indices[i];
 
@@ -85,7 +238,8 @@ void TriangleMesh::updateVertexNormals() {
 }
 
 void TriangleMesh::smooth(double value, int iterations) {
-	std::vector<int> verts(vertices.size());
+	std::vector<int> verts;
+	verts.reserve(vertices.size());
 	for (int i = 0; i < vertices.size(); i++) {
 		verts.push_back(i);
 	}
@@ -143,11 +297,13 @@ void TriangleMesh::removeMinimumTriangleCountPolyhedra(int count) {
 }
 
 void TriangleMesh::smoothTriangleMesh(double value, std::vector<bool> isVertexSmooth) {
-	std::vector<Point3f> newVertices(vertices.size());
+	std::vector<Point3f> newVertices;
+	newVertices.reserve(vertices.size());
 
 	for (int i = 0; i < vertices.size(); i++) {
 		if (!isVertexSmooth[i]) {
 			newVertices.push_back(vertices[i]);
+			continue;
 		}
 
 		int count = 0;
@@ -170,7 +326,7 @@ void TriangleMesh::smoothTriangleMesh(double value, std::vector<bool> isVertexSm
 
 		avg /= (float)count;
 		Point3f ov = vertices[i];
-		Point3f nv = ov + (float) value * (avg - ov);
+		Point3f nv = ov + (float)value * (avg - ov);
 		newVertices.push_back(nv);
 	}
 

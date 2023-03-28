@@ -14,6 +14,7 @@ public:
 	int numFaces();
 	void clear();
 
+	void writeMeshToPLY(std::string filename);
 	void writeMeshToBOBJ(std::string filename);
 
 	void updateVertexTriangles();
