@@ -11,7 +11,7 @@ class ScalarField {
 public:
 	ScalarField();
 
-	ScalarField(int i, int j, int k, int cellsize);
+	ScalarField(int i, int j, int k, double cellsize);
 
 	void setPointRadius(double r);
 	void setFieldOffset(Vector3f offset);
