@@ -3,13 +3,15 @@
 #include "fluidsim.h"
 
 int main() {
-    foc::FluidSimulation fluidsim(64, 64, 64, 0.125);
+    foc::FluidSimulation fluidsim(32, 32, 32, 0.25);
 
-	fluidsim.addFluidPoint(32, 32, 32, 5.0);
-	fluidsim.addBodyForce(0, -9.81, 0);
+	double width, height, depth;
+	fluidsim.getSimulationDimensions(&width, &height, &depth);
+	fluidsim.addFluidPoint(width / 2, height / 2, depth / 2, 6.0);
+	fluidsim.addBodyForce(0, -25, 0);
 
 	fluidsim.initialize();
-	fluidsim.simulate(30.0, 30);
+	fluidsim.simulate(30.0, 60);
 
     return 0;
 }
