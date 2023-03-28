@@ -6,6 +6,7 @@
 #include "macgrid.h"
 #include "markerparticle.h"
 #include "particleadvector.h"
+#include "util/trianglemesh.h"
 
 namespace foc {
 
@@ -48,6 +49,13 @@ private:
 	void removeParticlesInSolidCells();
 	void updateFluidCells();
 
+	// reconstruct level set (SDF) and meshes
+	void polygonizeOutputSurface(TriangleMesh& mesh);
+	bool isVertexNearSolid(Point3f p, double eps);
+	void smoothSurfaceMesh(TriangleMesh& mesh);
+	void reconstructFluidSurfaceMesh();
+	void exportMeshToFile(TriangleMesh& mesh, std::string filename);
+
 	// advect velocity field with new marker particles
 	void computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir);
 	void advectVelocityFieldU();
@@ -88,7 +96,8 @@ private:
 
 		FluidPoint() {}
 		FluidPoint(Point3f pos, double r) :
-				position(pos), radius(r) {}
+				position(pos), radius(r) {
+		}
 	};
 
 	struct FluidCuboid {
@@ -106,10 +115,16 @@ private:
 	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
+	double markerParticleScale = 3.0;
 	int maxParticlesPerVelocityAdvection = 5e6;
 	double ratioFLIPPIC = 0.95;
 	int maxParticlesPerFLIPPICUpdate = 10e6;
 	int maxMarkerParticlesPerCell = 100;
+
+	int minimumSurfacePolyhedronTriangleCount = 0;
+	double surfaceSmoothingValue = 0.5;
+	int surfaceSmoothingIterations = 2;
+	Vector3f domainOffset;
 
 	int isize, jsize, ksize;
 	double dcell;

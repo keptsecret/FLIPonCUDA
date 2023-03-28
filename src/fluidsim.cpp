@@ -1,7 +1,8 @@
 #include "fluidsim.h"
 
 #include "pressuresolver.h"
-#include "scalarfield.h"
+#include "util/particlemesher.h"
+#include "util/scalarfield.h"
 #include <chrono>
 
 namespace foc {
@@ -17,7 +18,6 @@ FluidSimulation::FluidSimulation(int width, int height, int depth, double cellsi
 }
 
 void FluidSimulation::initialize() {
-	// TODO: initialize simulation here, e.g. mark fluid cells and create particles
 	if (!isInitialized) {
 		srand(randomSeed);
 
@@ -283,6 +283,94 @@ void FluidSimulation::updateFluidCells() {
 			}
 		}
 	}
+}
+
+void FluidSimulation::polygonizeOutputSurface(TriangleMesh& mesh) {
+	double radius = markerParticleRadius * markerParticleScale;
+
+	ParticleMesher mesher(isize, jsize, ksize, dcell);
+	mesh = mesher.particleToMesh(markerParticles, materialGrid, radius);
+}
+
+bool FluidSimulation::isVertexNearSolid(Point3f p, double eps) {
+	Point3i gridIndex = positionToGridIndex(p.x, p.y, p.z, dcell);
+	if (materialGrid.isCellSolid(gridIndex.x, gridIndex.y, gridIndex.z)) {
+		return true;
+	}
+
+	// is p near the solid boundary?
+	Point3f e(eps, eps, eps);
+	if (gridIndex.x == 1 || gridIndex.x == isize - 2 ||
+			gridIndex.y == 1 || gridIndex.y == jsize - 2 ||
+			gridIndex.z == 1 || gridIndex.z == ksize - 2) {
+		Point3f min = gridIndexToPosition(1, 1, 1, dcell);
+		Point3f max = gridIndexToPosition(isize - 2, jsize - 2, ksize - 2, dcell);
+		Bounds3f bbox(min + e, max + Vector3f(dcell, dcell, dcell) - Vector3f(e));
+		if (!bInside(p, bbox)) {
+			return true;
+		}
+	}
+
+	// is p near a solid cell?
+	Point3f gp = gridIndexToPosition(gridIndex.x, gridIndex.y, gridIndex.z, dcell);
+	Bounds3f bbox(gp + e, gp + Vector3f(dcell, dcell, dcell) - Vector3f(e));
+	if (bInside(p, bbox)) {
+		return false;
+	}
+
+	Vector3f ex(eps, 0.0, 0.0);
+	Vector3f ey(0.0, eps, 0.0);
+	Vector3f ez(0.0, 0.0, eps);
+
+	Point3f points[26]{
+		p - ex, p + ex, p - ey, p + ey, p - ez, p + ez, p - ex - ey, p - ex + ey,
+		p + ex - ey, p + ex + ey, p - ex - ez, p - ex + ez, p + ex - ez, p + ex + ez,
+		p - ey - ez, p - ey + ez, p + ey - ez, p + ey + ez, p - ex - ey - ez,
+		p - ex - ey + ez, p - ex + ey - ez, p - ex + ey + ez, p + ex - ey - ez,
+		p + ex - ey + ez, p + ex + ey - ez, p + ex + ey + ez
+	};
+
+	for (int idx = 0; idx < 26; idx++) {
+		Point3i gidx = positionToGridIndex(points[idx].x, points[idx].y, points[idx].z, dcell);
+		if (materialGrid.isCellSolid(gidx.x, gidx.y, gidx.z)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void FluidSimulation::smoothSurfaceMesh(TriangleMesh& mesh) {
+	std::vector<int> smoothVertices;
+	double eps = 0.02 * dcell;
+	for (int i = 0; i < mesh.vertices.size(); i++) {
+		Point3f v = mesh.vertices[i];
+		if (!isVertexNearSolid(v, eps)) {
+			smoothVertices.push_back(i);
+		}
+	}
+
+	mesh.smooth(surfaceSmoothingValue, surfaceSmoothingIterations, smoothVertices);
+}
+
+void FluidSimulation::exportMeshToFile(TriangleMesh& mesh, std::string filename) {
+	mesh.writeMeshToBOBJ(filename);
+}
+
+void FluidSimulation::reconstructFluidSurfaceMesh() {
+	TriangleMesh isoMesh;
+	polygonizeOutputSurface(isoMesh);
+	isoMesh.removeMinimumTriangleCountPolyhedra(minimumSurfacePolyhedronTriangleCount);
+
+	smoothSurfaceMesh(isoMesh);
+	isoMesh.translate(domainOffset);
+
+	std::string framestr = std::to_string(currentFrame);
+	framestr.insert(framestr.begin(), 6 - framestr.size(), '0');
+	std::string bakedir = "cache";
+	std::string ext = ".bobj";
+	std::string isofile = bakedir + "/" + framestr + ext;
+	exportMeshToFile(isoMesh, isofile);
 }
 
 void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir) {
@@ -825,6 +913,7 @@ void FluidSimulation::stepSimulation(double dt) {
 	updateFluidCells();
 
 	// TODO: reconstruct level set (SDF) and meshes (usings OpenVDB)
+	reconstructFluidSurfaceMesh();
 
 	// advect velocity field with new marker particles
 	advectVelocityField();
