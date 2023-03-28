@@ -29,6 +29,14 @@ public:
 	void addScalarFieldValue(int i, int j, int k, double value);
 	double getScalarFieldValue(int i, int j, int k);
 
+	void getGridDimensions(int* i, int* j, int* k) {
+		*i = isize;
+		*j = jsize;
+		*k = ksize;
+	}
+
+	double getCellSize() { return cellsize; }
+
 	Array3D<float>* getScalarFieldPointer();
 	Array3D<float>* getWeightFieldPointer();
 
