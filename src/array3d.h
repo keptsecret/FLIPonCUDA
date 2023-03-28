@@ -166,7 +166,7 @@ inline Point3f gridIndexToPosition(int i, int j, int k, double cellsize) {
 
 inline Point3i positionToGridIndex(double x, double y, double z, double cellsize) {
 	double invcs = 1.0 / cellsize;
-	return Point3i(static_cast<int>(x * invcs), static_cast<int>(y * invcs), static_cast<int>(z * invcs));
+	return Point3i(static_cast<int>(std::floor(x * invcs)), static_cast<int>(std::floor(y * invcs)), static_cast<int>(std::floor(z * invcs)));
 }
 
 inline Point3f gridIndexToCellCenter(int i, int j, int k, double cellsize) {
