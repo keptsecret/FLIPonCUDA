@@ -7,10 +7,7 @@ ParticleAdvector::ParticleAdvector() {
 
 void ParticleAdvector::tricubicInterpolate(std::vector<Point3f>& particles, MACGrid* vfield, std::vector<Vector3f>& output) {
 #ifndef FOC_BUILD_GPU
-	output.reserve(particles.size());
-	for (int i = output.size(); i < particles.size(); i++) {
-		output.push_back(Vector3f());
-	}
+	output.resize(particles.size());
 
 	for (int i = 0; i < particles.size(); i++) {
 		output[i] = vfield->getVelocityAt(particles[i]);

@@ -86,7 +86,7 @@ void PressureSolver::solve(PressureSolverParameters params, VectorXd& pressure) 
 
 	pressure.fill(0.0);
 
-	keymap.resize(isize * jsize * ksize);
+	keymap = std::vector<int>(isize * jsize * ksize, -1);
 	for (int i = 0; i < fluidCells->size(); i++) {
 		Point3i idx = fluidCells->at(i);
 		keymap[getFlatIndex(idx.x, idx.y, idx.z)] = i;
@@ -287,34 +287,34 @@ void PressureSolver::applyPreconditioner(MatrixCoefficients& A, VectorXd& precon
 		double precon_im1 = 0.0;
 		double q_im1 = 0.0;
 		if (vecidx_im1 != -1) {
-			plusi_im1  = (double)A[vecidx_im1].plusi * negscale;
+			plusi_im1 = (double)A[vecidx_im1].plusi * negscale;
 			precon_im1 = precon[vecidx_im1];
-			q_im1      = q[vecidx_im1];
+			q_im1 = q[vecidx_im1];
 		}
 
 		double plusj_jm1 = 0.0;
 		double precon_jm1 = 0.0;
 		double q_jm1 = 0.0;
 		if (vecidx_jm1 != -1) {
-			plusj_jm1  = (double)A[vecidx_jm1].plusj * negscale;
+			plusj_jm1 = (double)A[vecidx_jm1].plusj * negscale;
 			precon_jm1 = precon[vecidx_jm1];
-			q_jm1      = q[vecidx_jm1];
+			q_jm1 = q[vecidx_jm1];
 		}
 
 		double plusk_km1 = 0.0;
 		double precon_km1 = 0.0;
 		double q_km1 = 0.0;
 		if (vecidx_km1 != -1) {
-			plusk_km1  = (double)A[vecidx_km1].plusk * negscale;
+			plusk_km1 = (double)A[vecidx_km1].plusk * negscale;
 			precon_km1 = precon[vecidx_km1];
-			q_km1      = q[vecidx_km1];
+			q_km1 = q[vecidx_km1];
 		}
 
 		double t = residual[vecidx] - plusi_im1 * precon_im1 * q_im1 -
 				plusj_jm1 * precon_jm1 * q_jm1 -
 				plusk_km1 * precon_km1 * q_km1;
 
-		t = t*precon[vecidx];
+		t = t * precon[vecidx];
 		q[vecidx] = t;
 	}
 
@@ -342,7 +342,7 @@ void PressureSolver::applyPreconditioner(MatrixCoefficients& A, VectorXd& precon
 				plusj * preconval * vect_jp1 -
 				plusk * preconval * vect_kp1;
 
-		t = t*preconval;
+		t = t * preconval;
 		vect[vecidx] = t;
 	}
 }
@@ -359,22 +359,34 @@ void PressureSolver::applyMatrix(MatrixCoefficients& A, VectorXd& x, VectorXd& r
 		// val = dot product of column vector x and idxth row of matrix A
 		double val = 0.0;
 		int vecidx = keymap[getFlatIndex(i - 1, j, k)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		vecidx = keymap[getFlatIndex(i + 1, j, k)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		vecidx = keymap[getFlatIndex(i, j - 1, k)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		vecidx = keymap[getFlatIndex(i, j + 1, k)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		vecidx = keymap[getFlatIndex(i, j, k - 1)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		vecidx = keymap[getFlatIndex(i, j, k + 1)];
-		if (vecidx != -1) { val += x.vector[vecidx]; }
+		if (vecidx != -1) {
+			val += x.vector[vecidx];
+		}
 
 		val *= negscale;
 
@@ -388,14 +400,14 @@ void PressureSolver::applyMatrix(MatrixCoefficients& A, VectorXd& x, VectorXd& r
 // v1 += v2*scale
 void PressureSolver::addScaledVector(VectorXd& v1, VectorXd& v2, double scale) {
 	for (unsigned int idx = 0; idx < v1.size(); idx++) {
-		v1.vector[idx] += v2.vector[idx]*scale;
+		v1.vector[idx] += v2.vector[idx] * scale;
 	}
 }
 
 // result = v1*s1 + v2*s2
 void PressureSolver::addScaledVectors(VectorXd& v1, double s1, VectorXd& v2, double s2, VectorXd& result) {
 	for (unsigned int idx = 0; idx < v1.size(); idx++) {
-		result.vector[idx] = v1.vector[idx]*s1 + v2.vector[idx]*s2;
+		result.vector[idx] = v1.vector[idx] * s1 + v2.vector[idx] * s2;
 	}
 }
 
