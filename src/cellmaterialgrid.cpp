@@ -8,6 +8,7 @@ CellMaterialGrid::CellMaterialGrid() :
 
 CellMaterialGrid::CellMaterialGrid(int i, int j, int k) :
 		isize(i), jsize(j), ksize(k), grid(i, j, k, Material::air) {
+	grid.setOutOfRangeValue(Material::solid);
 }
 
 Material CellMaterialGrid::operator()(int i, int j, int k) {

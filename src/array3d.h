@@ -42,6 +42,11 @@ public:
 				}
 			}
 		}
+
+		if (arr.bIsOutOfRangeValueSet) {
+			OUT_OF_RANGE_VALUE = arr.OUT_OF_RANGE_VALUE;
+			bIsOutOfRangeValueSet = true;
+		}
 	}
 
 	Array3D<T>& operator=(const Array3D<T>& arr) {
@@ -64,6 +69,11 @@ public:
 			}
 		}
 
+		if (arr.bIsOutOfRangeValueSet) {
+			OUT_OF_RANGE_VALUE = arr.OUT_OF_RANGE_VALUE;
+			bIsOutOfRangeValueSet = true;
+		}
+
 		return *this;
 	}
 
@@ -73,6 +83,9 @@ public:
 
 	T operator()(int i, int j, int k) {
 		if (!isIndexInRange(i, j, k)) {
+			if (bIsOutOfRangeValueSet) {
+				return OUT_OF_RANGE_VALUE;
+			}
 			std::printf("Error: index out of range.\n");
 		}
 
@@ -81,6 +94,9 @@ public:
 
 	T operator()(int idx) {
 		if (!(idx >= 0 && idx < numElements)) {
+			if (bIsOutOfRangeValueSet) {
+				return OUT_OF_RANGE_VALUE;
+			}
 			std::printf("Error: index out of range.\n");
 		}
 
@@ -111,6 +127,9 @@ public:
 
 	T get(int i, int j, int k) {
 		if (!isIndexInRange(i, j, k)) {
+			if (bIsOutOfRangeValueSet) {
+				return OUT_OF_RANGE_VALUE;
+			}
 			std::printf("Error: index out of range.\n");
 		}
 
@@ -119,6 +138,9 @@ public:
 
 	T get(int idx) {
 		if (!(idx >= 0 && idx < numElements)) {
+			if (bIsOutOfRangeValueSet) {
+				return OUT_OF_RANGE_VALUE;
+			}
 			std::printf("Error: index out of range.\n");
 		}
 
@@ -127,6 +149,22 @@ public:
 
 	T* data() {
 		return grid;
+	}
+
+	void setOutOfRangeValue() {
+		bIsOutOfRangeValueSet = false;
+	}
+	void setOutOfRangeValue(T val) {
+		OUT_OF_RANGE_VALUE = val;
+		bIsOutOfRangeValueSet = true;
+	}
+
+	bool isOutOfRangeValueSet() {
+		return bIsOutOfRangeValueSet;
+	}
+
+	T getOutOfRangeValue() {
+		return OUT_OF_RANGE_VALUE;
 	}
 
 	inline bool isIndexInRange(int i, int j, int k) {
@@ -144,6 +182,9 @@ private:
 		return (unsigned int)i + (unsigned int)width * ((unsigned int)j + (unsigned int)height * (unsigned int)k);
 	}
 
+	bool bIsOutOfRangeValueSet = false;
+	T OUT_OF_RANGE_VALUE;
+
 	T* grid;
 	int numElements;
 };
@@ -158,6 +199,10 @@ inline bool isGridIndexInRange(Point3i g, int imax, int jmax, int kmax) {
 
 inline bool isGridIndexInRange(int i, int j, int k, int imax, int jmax, int kmax) {
 	return i >= 0 && j >= 0 && k >= 0 && i <= imax && j <= jmax && k <= kmax;
+}
+
+inline bool isPositionInGrid(double x, double y, double z, double cellsize, int i, int j, int k) {
+	return x >= 0 && y >= 0 && z >= 0 && x < cellsize * i && y < cellsize * j && z < cellsize * k;
 }
 
 inline Point3f gridIndexToPosition(int i, int j, int k, double cellsize) {
