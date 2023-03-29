@@ -576,7 +576,9 @@ void FluidSimulation::applyConstantBodyForces(double dt) {
 				}
 			}
 		}
+	}
 
+	if (fabs(totalBodyForce.y) > 0.0) {
 		for (int k = 0; k < ksize; k++) {
 			for (int j = 0; j < jsize + 1; j++) {
 				for (int i = 0; i < isize; i++) {
@@ -586,12 +588,14 @@ void FluidSimulation::applyConstantBodyForces(double dt) {
 				}
 			}
 		}
+	}
 
+	if (fabs(totalBodyForce.z) > 0.0) {
 		for (int k = 0; k < ksize + 1; k++) {
 			for (int j = 0; j < jsize; j++) {
 				for (int i = 0; i < isize; i++) {
 					if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid)) {
-						macGrid.setW(i, j, k, macGrid.U(i, j, k) + totalBodyForce.z * dt);
+						macGrid.setW(i, j, k, macGrid.W(i, j, k) + totalBodyForce.z * dt);
 					}
 				}
 			}
@@ -697,7 +701,7 @@ void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid,
 					updatedMACGrid.setU(i, j, k, 0.0);
 				}
 
-				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid)) {
+				if (materialGrid.isFaceBorderingMaterialU(i, j, k, Material::fluid) && !materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid)) {
 					applyPressureToFaceU(i, j, k, pressureGrid, updatedMACGrid, dt);
 				}
 			}
@@ -711,7 +715,7 @@ void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid,
 					updatedMACGrid.setV(i, j, k, 0.0);
 				}
 
-				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid)) {
+				if (materialGrid.isFaceBorderingMaterialV(i, j, k, Material::fluid) && !materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid)) {
 					applyPressureToFaceV(i, j, k, pressureGrid, updatedMACGrid, dt);
 				}
 			}
@@ -725,7 +729,7 @@ void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid,
 					updatedMACGrid.setW(i, j, k, 0.0);
 				}
 
-				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid) && materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid)) {
+				if (materialGrid.isFaceBorderingMaterialW(i, j, k, Material::fluid) && !materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid)) {
 					applyPressureToFaceW(i, j, k, pressureGrid, updatedMACGrid, dt);
 				}
 			}

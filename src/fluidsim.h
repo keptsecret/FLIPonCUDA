@@ -111,8 +111,7 @@ private:
 	};
 
 	bool isInitialized = false;
-	double gravity = -9.81;
-	double density = 1000.0;
+	double density = 20.0;
 	FOC_CONST double CFLConditionNumber = 5.0; // maximum number of cells a particle can move
 	int randomSeed = 42;
 
