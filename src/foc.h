@@ -100,6 +100,28 @@ inline float gamma(int n) {
 	return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 }
 
+inline double cubicInterpolate(double p[4], double x) {
+	return p[1] + 0.5 * x * (p[2] - p[0] + x * (2.0 * p[0] - 5.0 * p[1] + 4.0 * p[2] - p[3] + x * (3.0 * (p[1] - p[2]) + p[3] - p[0])));
+}
+
+inline double bicubicInterpolate(double p[4][4], double x, double y) {
+	double arr[4];
+	arr[0] = cubicInterpolate(p[0], x);
+	arr[1] = cubicInterpolate(p[1], x);
+	arr[2] = cubicInterpolate(p[2], x);
+	arr[3] = cubicInterpolate(p[3], x);
+	return cubicInterpolate(arr, y);
+}
+
+inline double tricubicInterpolate(double p[4][4][4], double x, double y, double z) {
+	double arr[4];
+	arr[0] = bicubicInterpolate(p[0], x, y);
+	arr[1] = bicubicInterpolate(p[1], x, y);
+	arr[2] = bicubicInterpolate(p[2], x, y);
+	arr[3] = bicubicInterpolate(p[3], x, y);
+	return cubicInterpolate(arr, z);
+}
+
 } // namespace foc
 
 #endif // FOC_H
