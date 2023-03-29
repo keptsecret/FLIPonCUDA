@@ -45,6 +45,10 @@ public:
 	Vector3f getVelocityFaceV(int i, int j, int k);
 	Vector3f getVelocityFaceW(int i, int j, int k);
 
+	double interpolateU(double x, double y, double z);
+	double interpolateV(double x, double y, double z);
+	double interpolateW(double x, double y, double z);
+
 	Vector3f getVelocityAt(double x, double y, double z);
 	Vector3f getVelocityAt(Point3f pos);
 
@@ -99,6 +103,7 @@ private:
 	}
 
 private:
+	double OUT_OF_RANGE_VALUE = 0.0;
 	int numExtrapolationLayers;
 
 	int isize, jsize, ksize;

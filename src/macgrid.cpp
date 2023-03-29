@@ -16,6 +16,10 @@ void MACGrid::initializeVelocityGrids() {
 	u = Array3D<float>(isize + 1, jsize, ksize, 0.0f);
 	v = Array3D<float>(isize, jsize + 1, ksize, 0.0f);
 	w = Array3D<float>(isize, jsize, ksize + 1, 0.0f);
+
+	u.setOutOfRangeValue(0.0);
+	v.setOutOfRangeValue(0.0);
+	w.setOutOfRangeValue(0.0);
 }
 
 void MACGrid::clearU() {
@@ -61,14 +65,26 @@ float* MACGrid::getRawArrayW() {
 }
 
 float MACGrid::U(int i, int j, int k) {
+	if (!isGridIndexInRange(i, j, k, isize + 1, jsize, ksize)) {
+		return OUT_OF_RANGE_VALUE;
+	}
+
 	return u(i, j, k);
 }
 
 float MACGrid::V(int i, int j, int k) {
+	if (!isGridIndexInRange(i, j, k, isize, jsize + 1, ksize)) {
+		return OUT_OF_RANGE_VALUE;
+	}
+
 	return v(i, j, k);
 }
 
 float MACGrid::W(int i, int j, int k) {
+	if (!isGridIndexInRange(i, j, k, isize, jsize, ksize + 1)) {
+		return OUT_OF_RANGE_VALUE;
+	}
+
 	return w(i, j, k);
 }
 
@@ -163,13 +179,108 @@ Vector3f MACGrid::getVelocityFaceW(int i, int j, int k) {
 	return Vector3f(vx, vy, vz);
 }
 
-Vector3f MACGrid::getVelocityAt(double x, double y, double z) {
-	// TODO: implement?
-	//	double xvel = interpolateU(x, y, z);
-	//	double yvel = interpolateV(x, y, z);
-	//	double zvel = interpolateW(x, y, z);
+double MACGrid::interpolateU(double x, double y, double z) {
+	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+		return 0.0;
+	}
 
-	return Vector3f();
+	y -= 0.5 * dcell;
+	z -= 0.5 * dcell;
+
+	Point3i idx = positionToGridIndex(x, y, z, dcell);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+
+	double invcs = 1.0 / dcell;
+	double ix = (x - pos.x) * invcs;
+	double iy = (y - pos.y) * invcs;
+	double iz = (z - pos.z) * invcs;
+
+	int refi = idx.x - 1;
+	int refj = idx.y - 1;
+	int refk = idx.z - 1;
+
+	double points[4][4][4];
+	for (int pk = 0; pk < 4; pk++) {
+		for (int pj = 0; pj < 4; pj++) {
+			for (int pi = 0; pi < 4; pi++) {
+				points[pk][pj][pi] = U(pi + refi, pj + refj, pk + refk);
+			}
+		}
+	}
+
+	return tricubicInterpolate(points, ix, iy, iz);
+}
+
+double MACGrid::interpolateV(double x, double y, double z) {
+	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+		return 0.0;
+	}
+
+	x -= 0.5 * dcell;
+	z -= 0.5 * dcell;
+
+	Point3i idx = positionToGridIndex(x, y, z, dcell);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+
+	double invcs = 1.0 / dcell;
+	double ix = (x - pos.x) * invcs;
+	double iy = (y - pos.y) * invcs;
+	double iz = (z - pos.z) * invcs;
+
+	int refi = idx.x - 1;
+	int refj = idx.y - 1;
+	int refk = idx.z - 1;
+
+	double points[4][4][4];
+	for (int pk = 0; pk < 4; pk++) {
+		for (int pj = 0; pj < 4; pj++) {
+			for (int pi = 0; pi < 4; pi++) {
+				points[pk][pj][pi] = V(pi + refi, pj + refj, pk + refk);
+			}
+		}
+	}
+
+	return tricubicInterpolate(points, ix, iy, iz);
+}
+
+double MACGrid::interpolateW(double x, double y, double z) {
+	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+		return 0.0;
+	}
+
+	x -= 0.5 * dcell;
+	y -= 0.5 * dcell;
+
+	Point3i idx = positionToGridIndex(x, y, z, dcell);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+
+	double invcs = 1.0 / dcell;
+	double ix = (x - pos.x) * invcs;
+	double iy = (y - pos.y) * invcs;
+	double iz = (z - pos.z) * invcs;
+
+	int refi = idx.x - 1;
+	int refj = idx.y - 1;
+	int refk = idx.z - 1;
+
+	double points[4][4][4];
+	for (int pk = 0; pk < 4; pk++) {
+		for (int pj = 0; pj < 4; pj++) {
+			for (int pi = 0; pi < 4; pi++) {
+				points[pk][pj][pi] = W(pi + refi, pj + refj, pk + refk);
+			}
+		}
+	}
+
+	return tricubicInterpolate(points, ix, iy, iz);
+}
+
+Vector3f MACGrid::getVelocityAt(double x, double y, double z) {
+	double xvel = interpolateU(x, y, z);
+	double yvel = interpolateV(x, y, z);
+	double zvel = interpolateW(x, y, z);
+
+	return Vector3f(xvel, yvel, zvel);
 }
 
 Vector3f MACGrid::getVelocityAt(Point3f pos) {
@@ -305,9 +416,7 @@ void MACGrid::extrapolateVelocitiesForLayerIndexU(int idx, CellMaterialGrid& mat
 	for (int k = 0; k < ksize; k++) {
 		for (int j = 0; j < jsize; j++) {
 			for (int i = 0; i < isize + 1; i++) {
-				bool isExtrapolated = isFaceBorderingGridValueU(i, j, k, idx, layerGrid)
-						&& isFaceBorderingGridValueU(i - 1, j, k, idx, layerGrid)
-						&& (!materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid));
+				bool isExtrapolated = isFaceBorderingGridValueU(i, j, k, idx, layerGrid) && isFaceBorderingGridValueU(i - 1, j, k, idx, layerGrid) && (!materialGrid.isFaceBorderingMaterialU(i, j, k, Material::solid));
 				if (isExtrapolated) {
 					double vel = getExtrapolatedVelocityForFaceU(i, j, k, idx, layerGrid);
 					setU(i, j, k, vel);
@@ -321,9 +430,7 @@ void MACGrid::extrapolateVelocitiesForLayerIndexV(int idx, CellMaterialGrid& mat
 	for (int k = 0; k < ksize; k++) {
 		for (int j = 0; j < jsize + 1; j++) {
 			for (int i = 0; i < isize; i++) {
-				bool isExtrapolated = isFaceBorderingGridValueV(i, j, k, idx, layerGrid)
-						&& isFaceBorderingGridValueV(i, j - 1, k, idx, layerGrid)
-						&& (!materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid));
+				bool isExtrapolated = isFaceBorderingGridValueV(i, j, k, idx, layerGrid) && isFaceBorderingGridValueV(i, j - 1, k, idx, layerGrid) && (!materialGrid.isFaceBorderingMaterialV(i, j, k, Material::solid));
 				if (isExtrapolated) {
 					double vel = getExtrapolatedVelocityForFaceV(i, j, k, idx, layerGrid);
 					setV(i, j, k, vel);
@@ -337,9 +444,7 @@ void MACGrid::extrapolateVelocitiesForLayerIndexW(int idx, CellMaterialGrid& mat
 	for (int k = 0; k < ksize + 1; k++) {
 		for (int j = 0; j < jsize; j++) {
 			for (int i = 0; i < isize; i++) {
-				bool isExtrapolated = isFaceBorderingGridValueW(i, j, k, idx, layerGrid)
-						&& isFaceBorderingGridValueW(i, j, k - 1, idx, layerGrid)
-						&& (!materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid));
+				bool isExtrapolated = isFaceBorderingGridValueW(i, j, k, idx, layerGrid) && isFaceBorderingGridValueW(i, j, k - 1, idx, layerGrid) && (!materialGrid.isFaceBorderingMaterialW(i, j, k, Material::solid));
 				if (isExtrapolated) {
 					double vel = getExtrapolatedVelocityForFaceW(i, j, k, idx, layerGrid);
 					setW(i, j, k, vel);
