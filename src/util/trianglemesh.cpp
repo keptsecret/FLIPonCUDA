@@ -198,7 +198,8 @@ void TriangleMesh::updateVertexTriangles() {
 	vertexTriangles.reserve(vertices.size());
 
 	for (int i = 0; i < vertices.size(); i++) {
-		std::vector<int> triangles(14); // 14 is the maximum number of adjacent triangles to a vertex
+		std::vector<int> triangles; // 14 is the maximum number of adjacent triangles to a vertex
+		triangles.reserve(14);
 		vertexTriangles.push_back(triangles);
 	}
 
@@ -248,8 +249,7 @@ void TriangleMesh::smooth(double value, int iterations) {
 }
 
 void TriangleMesh::smooth(double value, int iterations, std::vector<int>& verts) {
-	std::vector<bool> isVertexSmooth;
-	isVertexSmooth.assign(vertices.size(), false);
+	std::vector<bool> isVertexSmooth(vertices.size(), false);
 	for (int i = 0; i < verts.size(); i++) {
 		isVertexSmooth[verts[i]] = true;
 	}
