@@ -53,6 +53,8 @@ void FluidSimulation::simulate(double fps, int numFrames) {
 }
 
 void FluidSimulation::update(double dt) {
+	times.clear();
+	times.resize(8);
 	auto start = std::chrono::steady_clock::now();
 
 	isCurrentFrameFinished = false;
@@ -71,9 +73,17 @@ void FluidSimulation::update(double dt) {
 	currentFrame++;
 	isCurrentFrameFinished = true;
 
+	// print frame times
 	auto end = std::chrono::steady_clock::now();
-	std::chrono::duration<double> elapsed_seconds = end - start;
-	std::cout << "Frame " << currentFrame << ":: elapsed time: " << elapsed_seconds.count() << "s\n";
+	times[0] = end - start;
+	std::cout << "Frame " << currentFrame << ":: total elapsed time: " << times[0].count() << "s\n";
+	std::cout << "\tUpdate fluid cells: " << times[1].count() << "s\n";
+	std::cout << "\tReconstruct mesh: " << times[2].count() << "s\n";
+	std::cout << "\tAdvect velocity field: " << times[3].count() << "s\n";
+	std::cout << "\tApply external body forces: " << times[4].count() << "s\n";
+	std::cout << "\tApply pressure (solve incompressibility): " << times[5].count() << "s\n";
+	std::cout << "\tExtrapolate fluid velocities: " << times[6].count() << "s\n";
+	std::cout << "\tAdvect marker particles: " << times[7].count() << "s\n\n";
 }
 
 void FluidSimulation::addFluidPoint(double x, double y, double z, double r) {
@@ -927,29 +937,50 @@ void FluidSimulation::stepSimulation(double dt) {
 	simulationTime += dt;
 
 	// update grid with new marker particle positions and mark fluid cells
+	auto start = std::chrono::steady_clock::now();
 	updateFluidCells();
+	auto end = std::chrono::steady_clock::now();
+	times[1] += end - start;
 
 	// TODO: reconstruct level set (SDF) and meshes (usings OpenVDB)
+	start = std::chrono::steady_clock::now();
 	reconstructFluidSurfaceMesh();
+	end = std::chrono::steady_clock::now();
+	times[2] += end - start;
 
 	// advect velocity field with new marker particles
+	start = std::chrono::steady_clock::now();
 	advectVelocityField();
+	end = std::chrono::steady_clock::now();
+	times[3] += end - start;
 	prevMACGrid = macGrid;
 	extrapolateFluidVelocities(prevMACGrid);
 
 	// apply body forces, e.g. gravity
+	start = std::chrono::steady_clock::now();
 	applyBodyForcesToVelocityField(dt);
+	end = std::chrono::steady_clock::now();
+	times[4] += end - start;
 
 	// update and apply pressure
+	start = std::chrono::steady_clock::now();
 	Array3D<float> pressureGrid(isize, jsize, ksize, 0.0f);
 	updatePressureGrid(pressureGrid, dt);
 	applyPressureToVelocityField(pressureGrid, dt);
+	end = std::chrono::steady_clock::now();
+	times[5] += end - start;
 
+	start = std::chrono::steady_clock::now();
 	extrapolateFluidVelocities(macGrid);
+	end = std::chrono::steady_clock::now();
+	times[6] += end - start;
 
 	// update and advect marker particles
+	start = std::chrono::steady_clock::now();
 	updateMarkerParticleVelocities();
 	advanceMarkerParticles(dt);
+	end = std::chrono::steady_clock::now();
+	times[7] += end - start;
 }
 
 } // namespace foc

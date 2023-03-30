@@ -146,6 +146,9 @@ private:
 	MACGrid macGrid;
 	MACGrid prevMACGrid;
 	CellMaterialGrid materialGrid;
+
+	// for logging times
+	std::vector<std::chrono::duration<double>> times;
 };
 
 } // namespace foc
