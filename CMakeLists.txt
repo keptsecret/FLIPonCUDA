@@ -72,6 +72,7 @@ set(FOC_SOURCE
         )
 
 set(FOC_UTIL_HEADERS
+        src/util/array3dview.h
         src/util/scalarfield.h
         src/util/trianglemesh.h
         src/util/particlemesher.h
@@ -86,11 +87,12 @@ set(FOC_UTIL_SOURCE
         )
 
 if (CUDA_ENABLED)
+    set(FOC_GPU_HEADERS
+            src/gpu/util.h
+            )
+
     set_source_files_properties(
-            ${FOC_HEADERS}
-            ${FOC_SOURCE}
-            ${FOC_UTIL_HEADERS}
-            ${FOC_UTIL_SOURCE}
+            ${FOC_GPU_HEADERS}
 
             PROPERTIES LANGUAGE CUDA
     )
@@ -101,6 +103,7 @@ add_library(flipfluidsim_lib STATIC
         ${FOC_SOURCE}
         ${FOC_UTIL_HEADERS}
         ${FOC_UTIL_SOURCE}
+        ${FOC_GPU_HEADERS}
         )
 
 target_compile_definitions(flipfluidsim_lib PRIVATE ${FOC_DEFINITIONS})
