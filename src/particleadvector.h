@@ -12,7 +12,8 @@ public:
 
 	//bool initialize();
 
-	void tricubicInterpolate(std::vector<Point3f>& particles, MACGrid* vfield, std::vector<Vector3f>& output);
+	void tricubicInterpolate(std::vector<Vector3f>& particles, MACGrid* vfield, std::vector<Vector3f>& output);
+	void tricubicInterpolate(std::vector<Vector3f>& particles, MACGrid* vfield);
 
 	void advectParticles(std::vector<Point3f>& particles, MACGrid* vfield, double dt, std::vector<Point3f>& output);
 

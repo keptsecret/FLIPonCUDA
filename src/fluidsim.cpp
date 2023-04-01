@@ -416,13 +416,15 @@ void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>&
 	positions.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
 	velocity.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
 
-	// TODO: potential for parallelization
 #ifndef FOC_BUILD_GPU
 	for (const auto& mp : markerParticles) {
-		velocityGrid.addPointValue(mp.position, mp.velocity[dir]); // TODO: potentially check weights
+		velocityGrid.addPointValue(mp.position, mp.velocity[dir]);
 	}
 #else
-	// for cuda acceleration here
+	// TODO: change to gpu for cuda acceleration
+	for (const auto& mp : markerParticles) {
+		velocityGrid.addPointValue(mp.position, mp.velocity[dir]);
+	}
 #endif
 	velocityGrid.applyWeightField();
 
@@ -785,14 +787,14 @@ void FluidSimulation::extrapolateFluidVelocities(MACGrid& velocityGrid) {
 
 void FluidSimulation::updateMarkerParticleVelocitiesSubset(int start, int end) {
 	int size = end - start + 1;
-	std::vector<Point3f> positions;
+	std::vector<Vector3f> positions;
 	positions.reserve(size);
 	std::vector<Vector3f> velocityNew, velocityOld;
 	velocityNew.reserve(size);
 	velocityOld.reserve(size);
 
 	for (int idx = start; idx <= end; idx++) {
-		positions.push_back(markerParticles[idx].position);
+		positions.push_back(Vector3f(markerParticles[idx].position));
 	}
 
 	particleAdvector.tricubicInterpolate(positions, &macGrid, velocityNew);
