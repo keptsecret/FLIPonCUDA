@@ -147,6 +147,28 @@ public:
 		return grid[idx];
 	}
 
+	T* getPointer(int i, int j, int k) {
+		if (!isIndexInRange(i, j, k)) {
+			if (bIsOutOfRangeValueSet) {
+				return &OUT_OF_RANGE_VALUE;
+			}
+			std::printf("Error: index out of range.\n");
+		}
+
+		return &grid[getFlattenedIndex(i, j, k)];
+	}
+
+	T* getPointer(int idx) {
+		if (!(idx >= 0 && idx < numElements)) {
+			if (bIsOutOfRangeValueSet) {
+				return &OUT_OF_RANGE_VALUE;
+			}
+			std::printf("Error: index out of range.\n");
+		}
+
+		return &grid[idx];
+	}
+
 	T* data() {
 		return grid;
 	}

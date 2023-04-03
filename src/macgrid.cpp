@@ -3,12 +3,12 @@
 namespace foc {
 
 MACGrid::MACGrid() :
-		isize(10), jsize(10), ksize(10), dcell(0.1) {
+		isize(10), jsize(10), ksize(10), cellsize(0.1) {
 	initializeVelocityGrids();
 }
 
 MACGrid::MACGrid(int width, int height, int depth, double cellsize) :
-		isize(width), jsize(height), ksize(depth), dcell(cellsize) {
+		isize(width), jsize(height), ksize(depth), cellsize(cellsize) {
 	initializeVelocityGrids();
 }
 
@@ -180,17 +180,17 @@ Vector3f MACGrid::getVelocityFaceW(int i, int j, int k) {
 }
 
 double MACGrid::interpolateU(double x, double y, double z) {
-	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+	if (!isPositionInGrid(x, y, z, cellsize, isize, jsize, ksize)) {
 		return 0.0;
 	}
 
-	y -= 0.5 * dcell;
-	z -= 0.5 * dcell;
+	y -= 0.5 * cellsize;
+	z -= 0.5 * cellsize;
 
-	Point3i idx = positionToGridIndex(x, y, z, dcell);
-	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+	Point3i idx = positionToGridIndex(x, y, z, cellsize);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, cellsize);
 
-	double invcs = 1.0 / dcell;
+	double invcs = 1.0 / cellsize;
 	double ix = (x - pos.x) * invcs;
 	double iy = (y - pos.y) * invcs;
 	double iz = (z - pos.z) * invcs;
@@ -212,17 +212,17 @@ double MACGrid::interpolateU(double x, double y, double z) {
 }
 
 double MACGrid::interpolateV(double x, double y, double z) {
-	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+	if (!isPositionInGrid(x, y, z, cellsize, isize, jsize, ksize)) {
 		return 0.0;
 	}
 
-	x -= 0.5 * dcell;
-	z -= 0.5 * dcell;
+	x -= 0.5 * cellsize;
+	z -= 0.5 * cellsize;
 
-	Point3i idx = positionToGridIndex(x, y, z, dcell);
-	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+	Point3i idx = positionToGridIndex(x, y, z, cellsize);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, cellsize);
 
-	double invcs = 1.0 / dcell;
+	double invcs = 1.0 / cellsize;
 	double ix = (x - pos.x) * invcs;
 	double iy = (y - pos.y) * invcs;
 	double iz = (z - pos.z) * invcs;
@@ -244,17 +244,17 @@ double MACGrid::interpolateV(double x, double y, double z) {
 }
 
 double MACGrid::interpolateW(double x, double y, double z) {
-	if (!isPositionInGrid(x, y, z, dcell, isize, jsize, ksize)) {
+	if (!isPositionInGrid(x, y, z, cellsize, isize, jsize, ksize)) {
 		return 0.0;
 	}
 
-	x -= 0.5 * dcell;
-	y -= 0.5 * dcell;
+	x -= 0.5 * cellsize;
+	y -= 0.5 * cellsize;
 
-	Point3i idx = positionToGridIndex(x, y, z, dcell);
-	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, dcell);
+	Point3i idx = positionToGridIndex(x, y, z, cellsize);
+	Point3f pos = gridIndexToPosition(idx.x, idx.y, idx.z, cellsize);
 
-	double invcs = 1.0 / dcell;
+	double invcs = 1.0 / cellsize;
 	double ix = (x - pos.x) * invcs;
 	double iy = (y - pos.y) * invcs;
 	double iz = (z - pos.z) * invcs;
@@ -285,6 +285,12 @@ Vector3f MACGrid::getVelocityAt(double x, double y, double z) {
 
 Vector3f MACGrid::getVelocityAt(Point3f pos) {
 	return getVelocityAt(pos.x, pos.y, pos.z);
+}
+
+void MACGrid::getGridDimensions(int* i, int* j, int* k) {
+	*i = isize;
+	*j = jsize;
+	*k = ksize;
 }
 
 void MACGrid::resetExtrapolatedFluidVelocities(CellMaterialGrid& materialGrid) {

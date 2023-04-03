@@ -52,6 +52,9 @@ public:
 	Vector3f getVelocityAt(double x, double y, double z);
 	Vector3f getVelocityAt(Point3f pos);
 
+	void getGridDimensions(int* i, int* j, int* k);
+	double getGridCellSize() { return cellsize; }
+
 	void extrapolateVelocityField(CellMaterialGrid& materialGrid, int numLayers);
 
 private:
@@ -107,7 +110,7 @@ private:
 	int numExtrapolationLayers;
 
 	int isize, jsize, ksize;
-	double dcell;
+	double cellsize;
 	Array3D<float> u, v, w;
 };
 

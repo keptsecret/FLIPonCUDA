@@ -589,7 +589,6 @@ public:
 		*radius = bInside(*center, *this) ? distance(*center, p_max) : 0;
 	}
 
-
 	FOC_CPU_GPU
 	bool intersectP(Point3f o, Vector3f d, float t_max = Infinity, float* hitt0 = nullptr, float* hitt1 = nullptr) const;
 
@@ -597,7 +596,6 @@ public:
 	bool intersectP(Point3f o, Vector3f d, float t_max, Vector3f& inv_dir, const int dir_is_neg[3]) const;
 
 public:
-
 	Point3<T> p_min, p_max;
 };
 
@@ -887,6 +885,26 @@ FOC_CPU_GPU inline bool bInsideExclusive(const Point3<T>& p, const Bounds3<T>& b
 template <typename T, typename U>
 FOC_CPU_GPU inline bool bExpand(const Bounds3<T>& b, U delta) {
 	return Bounds3<T>(b.p_min - Vector3<T>(delta, delta, delta), b.p_max + Vector3<T>(delta, delta, delta));
+}
+
+template <typename T, typename U>
+FOC_CPU_GPU inline Point3<T> bGetNearestPointInsideBounds(const Point3<T>& p, U eps, const Bounds3<T>& b) {
+	Point3<T> pos = p;
+
+	if (pos.x >= b.p_min.x + eps && pos.y >= b.p_min.y + eps && pos.z >= b.p_min.z + eps &&
+			pos.x <= b.p_max.x + eps && pos.y <= b.p_max.y + eps && pos.z <= b.p_max.z + eps) {
+		return pos;
+	}
+
+	pos.x = fmax(pos.x, b.p_min.x + eps);
+	pos.y = fmax(pos.y, b.p_min.y + eps);
+	pos.z = fmax(pos.z, b.p_min.z + eps);
+
+	pos.x = fmin(pos.x, b.p_max.x - eps);
+	pos.y = fmin(pos.y, b.p_max.y - eps);
+	pos.z = fmin(pos.z, b.p_max.z - eps);
+
+	return pos;
 }
 
 template <typename T>

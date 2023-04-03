@@ -14,19 +14,19 @@ public:
 		setArray3D(&dummyGrid);
 	}
 
-	Array3DView(Array3DView<T>* grid) {
+	Array3DView(Array3D<T>* grid) {
 		setDimensions(0, 0, 0);
 		setOffset(0, 0, 0);
 		setArray3D(grid);
 	}
 
-	Array3DView(int isize, int jsize, int ksize, Array3DView<T>* grid) {
+	Array3DView(int isize, int jsize, int ksize, Array3D<T>* grid) {
 		setDimensions(isize, jsize, ksize);
 		setOffset(0, 0, 0);
 		setArray3D(grid);
 	}
 
-	Array3DView(int isize, int jsize, int ksize, int offi, int offj, int offk, Array3DView<T>* grid) {
+	Array3DView(int isize, int jsize, int ksize, int offi, int offj, int offk, Array3D<T>* grid) {
 		setDimensions(isize, jsize, ksize);
 		setOffset(offi, offj, offk);
 		setArray3D(grid);
@@ -113,7 +113,7 @@ public:
 	}
 
 	T operator()(int i, int j, int k) {
-		get(i, j, k);
+		return get(i, j, k);
 	}
 
 	T set(int i, int j, int k, T value) {
