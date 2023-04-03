@@ -112,7 +112,7 @@ private:
 
 	bool isInitialized = false;
 	double density = 20.0;
-	FOC_CONST double CFLConditionNumber = 5.0; // maximum number of cells a particle can move
+	double CFLConditionNumber = 5.0; // maximum number of cells a particle can move
 	int randomSeed = 42;
 
 	double markerParticleRadius = 0.0;
@@ -128,7 +128,7 @@ private:
 	Vector3f domainOffset;
 
 	int isize, jsize, ksize;
-	double dcell;
+	double cellsize;
 
 	bool isCurrentFrameFinished = false;
 	int currentFrame = 0;

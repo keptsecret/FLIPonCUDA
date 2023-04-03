@@ -8,19 +8,19 @@
 namespace foc {
 
 FluidSimulation::FluidSimulation() :
-		isize(0), jsize(0), ksize(0), dcell(0) {
+		isize(0), jsize(0), ksize(0), cellsize(0) {
 }
 
 FluidSimulation::FluidSimulation(int width, int height, int depth, double cellsize) :
-		isize(width), jsize(height), ksize(depth), dcell(cellsize) {
-	initializeGrids(isize, jsize, ksize, dcell);
+		isize(width), jsize(height), ksize(depth), cellsize(cellsize) {
+	initializeGrids(isize, jsize, ksize, cellsize);
 	initializeVectors(isize, jsize, ksize);
 }
 
 void FluidSimulation::getSimulationDimensions(double* width, double* height, double* depth) {
-	*width = (double)isize * dcell;
-	*height = (double)jsize * dcell;
-	*depth = (double)ksize * dcell;
+	*width = (double)isize * cellsize;
+	*height = (double)jsize * cellsize;
+	*depth = (double)ksize * cellsize;
 }
 
 void FluidSimulation::initialize() {
@@ -157,7 +157,7 @@ void FluidSimulation::initializeSolidCells() {
 
 void FluidSimulation::initializeFluid() {
 	// turn fluid points and cuboids into a scalar field
-	ScalarField field(isize + 1, jsize + 1, ksize + 1, dcell);
+	ScalarField field(isize + 1, jsize + 1, ksize + 1, cellsize);
 	for (auto& fp : fluidPoints) {
 		field.addPoint(fp.position, fp.radius);
 	}
@@ -188,7 +188,7 @@ void FluidSimulation::initializeFluid() {
 
 	// set fluid material grid and indices
 	for (auto& mp : markerParticles) {
-		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
+		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, cellsize);
 		if (!materialGrid.isCellFluid(idx.x, idx.y, idx.z)) {
 			materialGrid.set(idx.x, idx.y, idx.z, Material::fluid);
 			fluidCellIndices.push_back(idx);
@@ -197,7 +197,7 @@ void FluidSimulation::initializeFluid() {
 }
 
 void FluidSimulation::initializeMarkerParticles() {
-	double pvolume = dcell * dcell * dcell / 8.0;
+	double pvolume = cellsize * cellsize * cellsize / 8.0;
 	markerParticleRadius = pow((3 * pvolume) / (4 * foc::Pi), 1.0 / 3.0);
 }
 
@@ -206,8 +206,8 @@ void FluidSimulation::addMarkerParticlesToCell(Point3i idx) {
 }
 
 void FluidSimulation::addMarkerParticlesToCell(Point3i idx, Vector3f vel) {
-	double q = 0.25 * dcell;
-	Point3f c = gridIndexToCellCenter(idx.x, idx.y, idx.z, dcell);
+	double q = 0.25 * cellsize;
+	Point3f c = gridIndexToCellCenter(idx.x, idx.y, idx.z, cellsize);
 
 	Point3f points[] = {
 		Point3f(c.x - q, c.y - q, c.z - q),
@@ -238,7 +238,7 @@ void FluidSimulation::removeParticlesInSolidCells() {
 
 	bool hasParticleInSolidCell = false;
 	for (auto& mp : markerParticles) {
-		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
+		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, cellsize);
 		bool isInSolidCell = materialGrid.isCellSolid(idx.x, idx.y, idx.z);
 		if (isInSolidCell) {
 			hasParticleInSolidCell = true;
@@ -275,7 +275,7 @@ void FluidSimulation::updateFluidCells() {
 
 	// TODO: potential for parallelization
 	for (const auto& mp : markerParticles) {
-		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
+		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, cellsize);
 		materialGrid.set(idx.x, idx.y, idx.z, Material::fluid);
 	}
 
@@ -305,12 +305,12 @@ void FluidSimulation::updateFluidCells() {
 void FluidSimulation::polygonizeOutputSurface(TriangleMesh& mesh) {
 	double radius = markerParticleRadius * markerParticleScale;
 
-	ParticleMesher mesher(isize, jsize, ksize, dcell);
+	ParticleMesher mesher(isize, jsize, ksize, cellsize);
 	mesh = mesher.particleToMesh(markerParticles, materialGrid, radius);
 }
 
 bool FluidSimulation::isVertexNearSolid(Point3f p, double eps) {
-	Point3i gridIndex = positionToGridIndex(p.x, p.y, p.z, dcell);
+	Point3i gridIndex = positionToGridIndex(p.x, p.y, p.z, cellsize);
 	if (materialGrid.isCellSolid(gridIndex.x, gridIndex.y, gridIndex.z)) {
 		return true;
 	}
@@ -320,17 +320,17 @@ bool FluidSimulation::isVertexNearSolid(Point3f p, double eps) {
 	if (gridIndex.x == 1 || gridIndex.x == isize - 2 ||
 			gridIndex.y == 1 || gridIndex.y == jsize - 2 ||
 			gridIndex.z == 1 || gridIndex.z == ksize - 2) {
-		Point3f min = gridIndexToPosition(1, 1, 1, dcell);
-		Point3f max = gridIndexToPosition(isize - 2, jsize - 2, ksize - 2, dcell);
-		Bounds3f bbox(min + e, max + Vector3f(dcell, dcell, dcell) - Vector3f(e));
+		Point3f min = gridIndexToPosition(1, 1, 1, cellsize);
+		Point3f max = gridIndexToPosition(isize - 2, jsize - 2, ksize - 2, cellsize);
+		Bounds3f bbox(min + e, max + Vector3f(cellsize, cellsize, cellsize) - Vector3f(e));
 		if (!bInside(p, bbox)) {
 			return true;
 		}
 	}
 
 	// is p near a solid cell?
-	Point3f gp = gridIndexToPosition(gridIndex.x, gridIndex.y, gridIndex.z, dcell);
-	Bounds3f bbox(gp + e, gp + Vector3f(dcell, dcell, dcell) - Vector3f(e));
+	Point3f gp = gridIndexToPosition(gridIndex.x, gridIndex.y, gridIndex.z, cellsize);
+	Bounds3f bbox(gp + e, gp + Vector3f(cellsize, cellsize, cellsize) - Vector3f(e));
 	if (bInside(p, bbox)) {
 		return false;
 	}
@@ -348,7 +348,7 @@ bool FluidSimulation::isVertexNearSolid(Point3f p, double eps) {
 	};
 
 	for (int idx = 0; idx < 26; idx++) {
-		Point3i gidx = positionToGridIndex(points[idx].x, points[idx].y, points[idx].z, dcell);
+		Point3i gidx = positionToGridIndex(points[idx].x, points[idx].y, points[idx].z, cellsize);
 		if (materialGrid.isCellSolid(gidx.x, gidx.y, gidx.z)) {
 			return true;
 		}
@@ -359,7 +359,7 @@ bool FluidSimulation::isVertexNearSolid(Point3f p, double eps) {
 
 void FluidSimulation::smoothSurfaceMesh(TriangleMesh& mesh) {
 	std::vector<int> smoothVertices;
-	double eps = 0.02 * dcell;
+	double eps = 0.02 * cellsize;
 	for (int i = 0; i < mesh.vertices.size(); i++) {
 		Point3f v = mesh.vertices[i];
 		if (!isVertexNearSolid(v, eps)) {
@@ -391,20 +391,20 @@ void FluidSimulation::reconstructFluidSurfaceMesh() {
 }
 
 void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>& isValueSet, int dir) {
-	ScalarField velocityGrid(field.width, field.height, field.depth, dcell);
-	velocityGrid.setPointRadius(dcell);
+	ScalarField velocityGrid(field.width, field.height, field.depth, cellsize);
+	velocityGrid.setPointRadius(cellsize);
 	velocityGrid.enableWeightField();
 
 	Vector3f offset;
 	switch (dir) {
 		case 0: // U
-			offset = Vector3f(0.0, 0.5 * dcell, 0.5 * dcell);
+			offset = Vector3f(0.0, 0.5 * cellsize, 0.5 * cellsize);
 			break;
 		case 1: // V
-			offset = Vector3f(0.5 * dcell, 0.0, 0.5 * dcell);
+			offset = Vector3f(0.5 * cellsize, 0.0, 0.5 * cellsize);
 			break;
 		case 2: // U
-			offset = Vector3f(0.5 * dcell, 0.5 * dcell, 0.0);
+			offset = Vector3f(0.5 * cellsize, 0.5 * cellsize, 0.0);
 			break;
 		default:
 			return;
@@ -621,7 +621,7 @@ void FluidSimulation::applyBodyForcesToVelocityField(double dt) {
 
 void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt) {
 	PressureSolverParameters params;
-	params.cellsize = dcell;
+	params.cellsize = cellsize;
 	params.density = density;
 	params.deltaTime = dt;
 	params.fluidCells = &fluidCellIndices;
@@ -640,7 +640,7 @@ void FluidSimulation::updatePressureGrid(Array3D<float>& pressureGrid, double dt
 
 void FluidSimulation::applyPressureToFaceU(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
 	double usolid = 0.0;
-	double scale = deltaTime / (density * dcell);
+	double scale = deltaTime / (density * cellsize);
 	double invscale = 1.0 / scale;
 
 	double p0, p1;
@@ -661,7 +661,7 @@ void FluidSimulation::applyPressureToFaceU(int i, int j, int k, Array3D<float>& 
 
 void FluidSimulation::applyPressureToFaceV(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
 	double vsolid = 0.0;
-	double scale = deltaTime / (density * dcell);
+	double scale = deltaTime / (density * cellsize);
 	double invscale = 1.0 / scale;
 
 	double p0, p1;
@@ -682,7 +682,7 @@ void FluidSimulation::applyPressureToFaceV(int i, int j, int k, Array3D<float>& 
 
 void FluidSimulation::applyPressureToFaceW(int i, int j, int k, Array3D<float>& pressureGrid, MACGrid& updatedMACGrid, double deltaTime) {
 	double wsolid = 0.0;
-	double scale = deltaTime / (density * dcell);
+	double scale = deltaTime / (density * cellsize);
 	double invscale = 1.0 / scale;
 
 	double p0, p1;
@@ -702,7 +702,7 @@ void FluidSimulation::applyPressureToFaceW(int i, int j, int k, Array3D<float>& 
 }
 
 void FluidSimulation::applyPressureToVelocityField(Array3D<float>& pressureGrid, double dt) {
-	MACGrid updatedMACGrid(isize, jsize, ksize, dcell);
+	MACGrid updatedMACGrid(isize, jsize, ksize, cellsize);
 
 	// TODO: potential for optimization
 	// calculate du, dv, dw values
@@ -834,7 +834,7 @@ void FluidSimulation::advanceMarkerParticlesSubset(int start, int end, double dt
 		MarkerParticle mp = markerParticles[start + i];
 		Point3f nextpos = output[i];
 
-		Point3i idx = positionToGridIndex(nextpos.x, nextpos.y, nextpos.z, dcell);
+		Point3i idx = positionToGridIndex(nextpos.x, nextpos.y, nextpos.z, cellsize);
 		if (materialGrid.isCellSolid(idx.x, idx.y, idx.z)) {
 			nextpos = resolveParticleSolidCollision(mp.position, nextpos);
 		}
@@ -855,7 +855,7 @@ void FluidSimulation::removeMarkerParticles() {
 	Array3D<int> countGrid(isize, jsize, ksize, 0);
 	for (int i = 0; i < markerParticles.size(); i++) {
 		MarkerParticle mp = markerParticles[i];
-		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, dcell);
+		Point3i idx = positionToGridIndex(mp.position.x, mp.position.y, mp.position.z, cellsize);
 		if (countGrid(idx.x, idx.y, idx.z) >= maxMarkerParticlesPerCell) {
 			isRemoved.push_back(true);
 			continue;
@@ -873,22 +873,22 @@ void FluidSimulation::removeMarkerParticles() {
 }
 
 Point3f FluidSimulation::resolveParticleSolidCollision(Point3f oldpos, Point3f newpos) {
-	Point3i oldidx = positionToGridIndex(oldpos.x, oldpos.y, oldpos.z, dcell);
-	Point3i newidx = positionToGridIndex(newpos.x, newpos.y, newpos.z, dcell);
+	Point3i oldidx = positionToGridIndex(oldpos.x, oldpos.y, oldpos.z, cellsize);
+	Point3i newidx = positionToGridIndex(newpos.x, newpos.y, newpos.z, cellsize);
 	if (!materialGrid.isCellSolid(oldidx.x, oldidx.y, oldidx.z) || materialGrid.isCellSolid(newidx.x, newidx.y, newidx.z)) {
 		return oldpos;
 	}
 
 	Point3i voxel;
-	bool foundVoxel = getLineSegmentVoxelIntersection(oldpos, newpos, dcell, materialGrid, &voxel);
+	bool foundVoxel = getLineSegmentVoxelIntersection(oldpos, newpos, cellsize, materialGrid, &voxel);
 
 	if (!foundVoxel) {
 		return oldpos;
 	}
 
 	Vector3f line = normalize(newpos - oldpos);
-	Point3f voxelpos = gridIndexToPosition(voxel.x, voxel.y, voxel.z, dcell);
-	Bounds3f bbox(voxelpos, Point3f(voxelpos.x + dcell, voxelpos.y + dcell, voxelpos.z + dcell));
+	Point3f voxelpos = gridIndexToPosition(voxel.x, voxel.y, voxel.z, cellsize);
+	Bounds3f bbox(voxelpos, Point3f(voxelpos.x + cellsize, voxelpos.y + cellsize, voxelpos.z + cellsize));
 
 	float t0, t1;
 	if (!bbox.intersectP(oldpos, line, Infinity, &t0, &t1)) {
@@ -896,9 +896,9 @@ Point3f FluidSimulation::resolveParticleSolidCollision(Point3f oldpos, Point3f n
 	}
 
 	Point3f isectP = oldpos + line * t0;
-	Point3f resolvedP = isectP - line * 0.05f * dcell;
+	Point3f resolvedP = isectP - line * 0.05f * cellsize;
 
-	Point3i resolvedidx = positionToGridIndex(resolvedP.x, resolvedP.y, resolvedP.z, dcell);
+	Point3i resolvedidx = positionToGridIndex(resolvedP.x, resolvedP.y, resolvedP.z, cellsize);
 	if (materialGrid.isCellSolid(resolvedidx.x, resolvedidx.y, resolvedidx.z)) {
 		return oldpos;
 	}
@@ -919,7 +919,7 @@ void FluidSimulation::advanceMarkerParticles(double dt) {
 
 double FluidSimulation::getNextTimeStep() {
 	double maxv = getMaxParticleSpeed();
-	double ts = CFLConditionNumber * dcell / maxv;
+	double ts = CFLConditionNumber * cellsize / maxv;
 	return ts;
 }
 
