@@ -9,17 +9,17 @@
 #define CUDA_CHECK(EXPR)                                        \
     if (EXPR != cudaSuccess) {                                  \
         cudaError_t error = cudaGetLastError();                 \
-        LOG_FATAL("CUDA error: %s", cudaGetErrorString(error)); \
+        printf("CUDA error: %s", cudaGetErrorString(error)); 	\
     } else /* eat semicolon */
 
-#define CU_CHECK(EXPR)                                              \
-    do {                                                            \
-        CUresult result = EXPR;                                     \
-        if (result != CUDA_SUCCESS) {                               \
-            const char *str;                                        \
-            CHECK_EQ(CUDA_SUCCESS, cuGetErrorString(result, &str)); \
-            LOG_FATAL("CUDA error: %s", str);                       \
-        }                                                           \
-    } while (false) /* eat semicolon */
+namespace cuda {
+
+inline size_t getCUDADeviceGlobalMem() {
+	cudaDeviceProp prop{};
+	CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
+	return prop.totalGlobalMem;
+}
+
+}
 
 #endif // FOC_GPU_UTIL_H
