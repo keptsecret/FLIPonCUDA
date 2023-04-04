@@ -57,7 +57,6 @@ private:
 	int batchDim = 5;
 	int maxThreadsPerBlock = 512;	// block size, CUDA's limit is 1024
 	int maxBatchesPerComputation = 15000; // grid size
-	int kernelWorkLoadSize = 1000;
 };
 
 } // namespace foc
