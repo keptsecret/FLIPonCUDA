@@ -9,9 +9,9 @@ if (MSVC)
     list(APPEND FOC_DEFINITIONS "FOC_IS_MSVC" "_ENABLE_EXTENDED_ALIGNED_STORAGE")
 endif ()
 
-option(CUDA_ENABLED "Enable GPU acceleration" OFF)
+option(CUDA_ENABLED "Enable GPU acceleration" ON)
 if (CUDA_ENABLED)
-    add_definitions(-DFOC_BUILD_GPU)
+    list(APPEND FOC_DEFINITIONS "FOC_BUILD_GPU")
 endif ()
 
 set(CMAKE_CUDA_STANDARD 17)
@@ -47,6 +47,7 @@ target_compile_options(
         "$<$<COMPILE_LANGUAGE:CUDA>:--std=c++17;--use_fast_math;--expt-relaxed-constexpr;--extended-lambda;--forward-unknown-to-host-compiler>"
         "$<$<COMPILE_LANGUAGE:CUDA>:$<IF:$<AND:$<CONFIG:Debug>,$<NOT:$<BOOL:$<TARGET_PROPERTY:CUDA_PTX_COMPILATION>>>>,-G;-g,-lineinfo;-maxrregcount;128>>"
         "$<$<COMPILE_LANGUAGE:CXX>:/bigobj>"
+        "$<$<CONFIG:DEBUG>:-G>"
 )
 
 ###########################################################################
@@ -89,10 +90,21 @@ set(FOC_UTIL_SOURCE
 if (CUDA_ENABLED)
     set(FOC_GPU_HEADERS
             src/gpu/util.h
+            src/gpu/kernels.h
+            )
+
+    set(FOC_GPU_SOURCE
+            src/gpu/tricubicinterpolate.cu
             )
 
     set_source_files_properties(
+            ${FOC_HEADERS}
+            ${FOC_SOURCE}
+            ${FOC_UTIL_HEADERS}
+            ${FOC_UTIL_SOURCE}
+
             ${FOC_GPU_HEADERS}
+            ${FOC_GPU_SOURCE}
 
             PROPERTIES LANGUAGE CUDA
     )
@@ -104,6 +116,7 @@ add_library(flipfluidsim_lib STATIC
         ${FOC_UTIL_HEADERS}
         ${FOC_UTIL_SOURCE}
         ${FOC_GPU_HEADERS}
+        ${FOC_GPU_SOURCE}
         )
 
 target_compile_definitions(flipfluidsim_lib PRIVATE ${FOC_DEFINITIONS})
