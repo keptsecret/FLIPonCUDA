@@ -1,6 +1,8 @@
 #include "particleadvector.h"
 
+#ifdef FOC_BUILD_GPU
 #include "gpu/kernels.h"
+#endif
 
 namespace foc {
 
@@ -138,8 +140,13 @@ int ParticleAdvector::getMaxBatchesPerComputation() {
 	int batchOffsetDataSize = 3 * sizeof(int);
 	int totalSize = batchPositionDataSize + batchVelocityDataSize + batchOffsetDataSize;
 
+#ifndef FOC_BUILD_GPU
+	fprintf(stderr, "Error:: ParticleAdvector::getMaxBatchesPerComputation: this shouldn't be happening\n");
+	return maxBatchesPerComputation;
+#else
 	size_t maxGlobalMem = cuda::getCUDADeviceGlobalMem();
 	return fmin(std::floor((double)maxGlobalMem / (double)totalSize), maxBatchesPerComputation);
+#endif
 }
 
 void ParticleAdvector::getParticleBatchGrid(double bw, double bh, double bd, std::vector<Vector3f>& particles, Array3D<ParticleBatch>& grid) {
@@ -268,6 +275,7 @@ void ParticleAdvector::getBatchData(MACGrid* vfield, Array3D<ParticleBatch>& par
 }
 
 void ParticleAdvector::tricubicInterpolateBatch(std::vector<BatchData>& batches, std::vector<Vector3f>& output) {
+#ifdef FOC_BUILD_GPU
 	// prepare inputs
 	std::vector<Vector3f> positionData;
 	positionData.reserve(maxThreadsPerBlock * batches.size());
@@ -340,6 +348,7 @@ void ParticleAdvector::tricubicInterpolateBatch(std::vector<BatchData>& batches,
 			dataoffset++;
 		}
 	}
+#endif
 }
 
 } // namespace foc

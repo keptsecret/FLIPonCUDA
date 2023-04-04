@@ -38,7 +38,7 @@ target_compile_options(
         "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xcudafe --diag_suppress=implicit_return_from_non_void_function>"
 )
 
-string(APPEND CMAKE_CUDA_FLAGS " -Xnvlink -suppress-stack-size-warning")
+string(APPEND CMAKE_CUDA_FLAGS " -Xnvlink -suppress-stack-size-warning -Wno-deprecated-gpu-targets")
 
 add_library(cuda_build_configuration INTERFACE)
 target_compile_options(
