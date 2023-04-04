@@ -6,6 +6,7 @@
 #endif
 
 #include <stdint.h>
+#include <cstddef>
 
 #if defined(FOC_BUILD_GPU) && defined(__CUDACC__)
 #define FOC_CPU_GPU __host__ __device__
@@ -94,7 +95,7 @@ inline double randomDouble(double min_val, double max_val) {
 	return min_val + (double)rand() / ((double)RAND_MAX / (max_val - min_val));
 }
 
-inline float gamma(int n) {
+FOC_CPU_GPU inline float gamma(int n) {
 	return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 }
 
