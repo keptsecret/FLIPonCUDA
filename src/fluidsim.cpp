@@ -411,19 +411,35 @@ void FluidSimulation::computeVelocityField(Array3D<float>& field, Array3D<bool>&
 	}
 	velocityGrid.setFieldOffset(offset);
 
+#ifndef FOC_BUILD_GPU
 	std::vector<Point3f> positions;
 	std::vector<float> velocity; // velocity in direction
 	positions.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
 	velocity.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
 
-#ifndef FOC_BUILD_GPU
 	for (const auto& mp : markerParticles) {
 		velocityGrid.addPointValue(mp.position, mp.velocity[dir]);
 	}
 #else
-	// TODO: change to gpu for cuda acceleration
-	for (const auto& mp : markerParticles) {
-		velocityGrid.addPointValue(mp.position, mp.velocity[dir]);
+	std::vector<Vector3f> positions;
+	std::vector<float> velocity; // velocity in direction
+	positions.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
+	velocity.reserve(fmin(maxParticlesPerVelocityAdvection, markerParticles.size()));
+
+	for (int start = 0; start < markerParticles.size(); start += maxParticlesPerVelocityAdvection) {
+		int end = start + maxParticlesPerVelocityAdvection - 1;
+		if (end > markerParticles.size()) {
+			end = markerParticles.size();
+		}
+
+		positions.clear();
+		velocity.clear();
+		for (int i = start; i < end; i++) {
+			positions.push_back(Vector3f(markerParticles[i].position));
+			velocity.push_back(markerParticles[i].velocity[dir]);
+		}
+
+		velocityGrid.addPointValues(positions, velocity);
 	}
 #endif
 	velocityGrid.applyWeightField();
@@ -451,7 +467,7 @@ void FluidSimulation::advectVelocityFieldU() {
 	computeVelocityField(uvel, isValueSet, 0);
 
 	std::vector<Point3i> extrapolationIndices;
-	extrapolationIndices.reserve((isize+1) * jsize * ksize);
+	extrapolationIndices.reserve((isize + 1) * jsize * ksize);
 	for (int k = 0; k < uvel.depth; k++) {
 		for (int j = 0; j < uvel.height; j++) {
 			for (int i = 0; i < uvel.width; i++) {
@@ -493,7 +509,7 @@ void FluidSimulation::advectVelocityFieldV() {
 	computeVelocityField(vvel, isValueSet, 1);
 
 	std::vector<Point3i> extrapolationIndices;
-	extrapolationIndices.reserve(isize * (jsize+1) * ksize);
+	extrapolationIndices.reserve(isize * (jsize + 1) * ksize);
 	for (int k = 0; k < vvel.depth; k++) {
 		for (int j = 0; j < vvel.height; j++) {
 			for (int i = 0; i < vvel.width; i++) {
@@ -944,7 +960,6 @@ void FluidSimulation::stepSimulation(double dt) {
 	auto end = std::chrono::steady_clock::now();
 	times[1] += end - start;
 
-	// TODO: reconstruct level set (SDF) and meshes (usings OpenVDB)
 	start = std::chrono::steady_clock::now();
 	reconstructFluidSurfaceMesh();
 	end = std::chrono::steady_clock::now();

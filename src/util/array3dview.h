@@ -116,7 +116,7 @@ public:
 		return get(i, j, k);
 	}
 
-	T set(int i, int j, int k, T value) {
+	void set(int i, int j, int k, T value) {
 		if (!isIndexInView(i, j, k)) {
 			std::printf("Error: index out of view range.\n");
 		}
@@ -129,6 +129,11 @@ public:
 
 	inline bool isIndexInView(int i, int j, int k) {
 		return i >= 0 && j >= 0 && k >= 0 && i < width && j < height && k < depth;
+	}
+
+	inline bool isIndexInParent(int i, int j, int k) {
+		Point3i pidx = viewToParentIndex(i, j, k);
+		return parent->isIndexInRange(pidx.x, pidx.y, pidx.z);
 	}
 
 	int width, height, depth;

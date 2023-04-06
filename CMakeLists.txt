@@ -95,6 +95,7 @@ if (CUDA_ENABLED)
 
     set(FOC_GPU_SOURCE
             src/gpu/tricubicinterpolate.cu
+            src/gpu/scalarfieldgpu.cu
             )
 
     set_source_files_properties(
