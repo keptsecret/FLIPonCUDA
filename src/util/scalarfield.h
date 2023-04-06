@@ -27,6 +27,7 @@ public:
 	void addPointValue(Point3f p, double val);
 
 	// calls GPU functions
+	void addPoints(std::vector<Vector3f>& points);
 	void addPointValues(std::vector<Vector3f>& points, std::vector<float>& values);
 	void addPointValues(std::vector<Vector3f>& points, std::vector<float>& values, double radius, Vector3f offset, double dx);
 
@@ -83,6 +84,7 @@ private:
 		std::vector<PointData>::iterator particlesEnd;
 	};
 
+	void initializePointData(std::vector<Vector3f>& points, std::vector<PointData>& pd);
 	void initializePointData(std::vector<Vector3f>& points, std::vector<float>& values, std::vector<PointData>& pd);
 	void initializeBatchDataGrid(std::vector<PointData>& points, Array3D<BatchData>& grid);
 	void initializeBatchRefs(Array3D<BatchData>& grid, std::vector<BatchDataRef>& queue);
@@ -91,10 +93,12 @@ private:
 	void updateBatchMinimumValues(Array3D<BatchData>& grid);
 	void getNextBatches(std::vector<BatchDataRef>& queue, Array3D<BatchData>& grid, std::vector<BatchDataRef>& batches, int n);
 
+	void computePointScalarField(std::vector<BatchDataRef>& batches, Array3D<BatchData>& batchDataGrid);
 	void computePointValueScalarField(std::vector<BatchDataRef>& batches, Array3D<BatchData>& batchDataGrid);
 	void computePointValueScalarWeightField(std::vector<BatchDataRef>& batches, Array3D<BatchData>& batchDataGrid);
 
 	int getMaxNumParticlesInBatch(std::vector<BatchDataRef>& batches);
+	void fillPointDataBuffer(std::vector<BatchDataRef>& batches, Array3D<BatchData>& grid, int numParticles, std::vector<float>& buffer);
 	void fillPointValueDataBuffer(std::vector<BatchDataRef>& batches, Array3D<BatchData>& grid, int numParticles, std::vector<float>& buffer);
 	void fillScalarFieldDataBuffer(std::vector<BatchDataRef>& batches, std::vector<float>& buffer);
 	void fillScalarWeightFieldDataBuffer(std::vector<BatchDataRef>& batches, std::vector<float>& buffer);

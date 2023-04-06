@@ -48,9 +48,17 @@ TriangleMesh ParticleMesher::polygonizeSlices(std::vector<MarkerParticle>& parti
 }
 
 void ParticleMesher::addPointsToScalarField(std::vector<MarkerParticle>& particles, ScalarField& field) {
+#ifndef FOC_BUILD_GPU
 	for (int i = 0; i < particles.size(); i++) {
 		field.addPoint(particles[i].position);
 	}
+#else
+	std::vector<Vector3f> positions;
+	for (int i = 0; i < particles.size(); i++) {
+		positions.push_back(Vector3f(particles[i].position));
+	}
+	field.addPoints(positions);
+#endif
 }
 
 } // namespace foc

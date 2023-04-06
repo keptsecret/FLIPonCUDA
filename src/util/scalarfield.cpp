@@ -155,6 +155,36 @@ void ScalarField::addPointValue(Point3f p, double val) {
 	}
 }
 
+void ScalarField::addPoints(std::vector<Vector3f>& points) {
+	if (!field.isOutOfRangeValueSet()) {
+		field.setOutOfRangeValue(0.0);
+	}
+
+	std::vector<PointData> pointData;
+	initializePointData(points, pointData);
+
+	Point3i batchDataDims(std::ceil((double)isize / (double)batchDim), std::ceil((double)jsize / (double)batchDim), std::ceil((double)ksize / (double)batchDim));
+	Array3D<BatchData> batchDataGrid(batchDataDims.x, batchDataDims.y, batchDataDims.z);
+	initializeBatchDataGrid(pointData, batchDataGrid);
+
+	std::vector<BatchDataRef> batchDataQueue;
+	initializeBatchRefs(batchDataGrid, batchDataQueue);
+
+	int batchSize = getMaxBatchesPerPointDataComputation();
+
+	while (!batchDataQueue.empty()) {
+		updateBatchMinimumValues(batchDataGrid);
+
+		std::vector<BatchDataRef> batches;
+		getNextBatches(batchDataQueue, batchDataGrid, batches, batchSize);
+		computePointScalarField(batches, batchDataGrid);
+	}
+
+	if (!field.isOutOfRangeValueSet()) {
+		field.setOutOfRangeValue();
+	}
+}
+
 void ScalarField::addPointValues(std::vector<Vector3f>& points, std::vector<float>& values) {
 	addPointValues(points, values, radius, gridOffset, cellsize);
 }
@@ -258,6 +288,16 @@ double ScalarField::getScalarFieldValueAtCellCenter(int i, int j, int k) {
 
 double ScalarField::evaluateTricubicFieldFunctionForRadiusSquared(double rsq) {
 	return 1.0 - coef1 * rsq * rsq * rsq + coef2 * rsq * rsq - coef3 * rsq;
+}
+
+void ScalarField::initializePointData(std::vector<Vector3f>& points, std::vector<PointData>& pd) {
+	float defaultValue = 0.0f;
+	Vector3f offset = gridOffset - Vector3f(0.5 * cellsize, 0.5 * cellsize, 0.5 * cellsize);
+	pd.reserve(points.size());
+
+	for (int i = 0; i < points.size(); i++) {
+		pd.push_back(PointData(points[i] - offset, defaultValue));
+	}
 }
 
 void ScalarField::initializePointData(std::vector<Vector3f>& points, std::vector<float>& values, std::vector<PointData>& pd) {
@@ -433,6 +473,38 @@ void ScalarField::getNextBatches(std::vector<BatchDataRef>& queue, Array3D<Batch
 	}
 }
 
+void ScalarField::computePointScalarField(std::vector<BatchDataRef>& batches, Array3D<BatchData>& batchDataGrid) {
+#ifdef FOC_BUILD_GPU
+	int numParticles = getMaxNumParticlesInBatch(batches);
+
+	std::vector<float> pointDataBuffer;
+	fillPointDataBuffer(batches, batchDataGrid, numParticles, pointDataBuffer);
+
+	std::vector<float> fieldDataBuffer;
+	fillScalarFieldDataBuffer(batches, fieldDataBuffer);
+
+	std::vector<Point3i> offsetDataBuffer;
+	fillBatchOffsetDataBuffer(batches, offsetDataBuffer);
+
+	cuda::launch_scalar_field_point_kernel(maxThreadsPerBlock, batches.size(), pointDataBuffer, fieldDataBuffer, offsetDataBuffer, numParticles, radius, cellsize);
+
+	int bufferidx = 0;
+	for (int bidx = 0; bidx < batches.size(); bidx++) {
+		Point3i g = batches[bidx].batchDataIndex;
+		Array3DView<float> fieldView = batchDataGrid(g.x, g.y, g.z).fieldView;
+
+		for (int k = 0; k < fieldView.depth; k++) {
+			for (int j = 0; j < fieldView.height; j++) {
+				for (int i = 0; i < fieldView.width; i++) {
+					fieldView.set(i, j, k, fieldView(i, j, k) + fieldDataBuffer[bufferidx]);
+					bufferidx++;
+				}
+			}
+		}
+	}
+#endif
+}
+
 void ScalarField::computePointValueScalarField(std::vector<BatchDataRef>& batches, Array3D<BatchData>& batchDataGrid) {
 #ifdef FOC_BUILD_GPU
 	int numParticles = getMaxNumParticlesInBatch(batches);
@@ -511,6 +583,37 @@ int ScalarField::getMaxNumParticlesInBatch(std::vector<BatchDataRef>& batches) {
 	}
 
 	return maxParticles;
+}
+
+void ScalarField::fillPointDataBuffer(std::vector<BatchDataRef>& batches, Array3D<BatchData>& grid, int numParticles, std::vector<float>& buffer) {
+	int numElems = 3 * batches.size() * numParticles;
+	buffer.reserve(numElems);
+
+	Vector3f outOfRangePos(grid.width * batchDim * cellsize + 2 * radius,
+			grid.height * batchDim * cellsize + 2 * radius,
+			grid.depth * batchDim * cellsize + 2 * radius);
+
+	for (int i = 0; i < batches.size(); i++) {
+		BatchDataRef b = batches[i];
+
+		int numPoints = b.particlesEnd - b.particlesBegin;
+		int numPad = numParticles - numPoints;
+
+		auto begin = b.particlesBegin;
+		auto end = b.particlesEnd;
+		for (auto it = begin; it != end; it++) {
+			Vector3f p = (*it).position;
+			buffer.push_back(p.x);
+			buffer.push_back(p.y);
+			buffer.push_back(p.z);
+		}
+
+		for (int j = 0; j < numPad; j++) {
+			buffer.push_back(outOfRangePos.x);
+			buffer.push_back(outOfRangePos.y);
+			buffer.push_back(outOfRangePos.z);
+		}
+	}
 }
 
 void ScalarField::fillPointValueDataBuffer(std::vector<BatchDataRef>& batches, Array3D<BatchData>& grid, int numParticles, std::vector<float>& buffer) {
