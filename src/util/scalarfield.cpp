@@ -101,6 +101,7 @@ void ScalarField::addCuboid(Point3f pmin, Point3f pmax) {
 	getGridIndexBounds(bbox, cellsize, isize, jsize, ksize, &gmin, &gmax);
 
 	Point3f gpos;
+	double eps = 10e-6;
 	for (int k = gmin.z; k <= gmax.z; k++) {
 		for (int j = gmin.y; j <= gmax.y; j++) {
 			for (int i = gmin.x; i <= gmax.x; i++) {
@@ -110,10 +111,10 @@ void ScalarField::addCuboid(Point3f pmin, Point3f pmax) {
 
 				gpos = gridIndexToPosition(i, j, k, cellsize);
 				if (bInside(gpos, bbox)) {
-					addScalarFieldValue(i, j, k, surfaceThreshold + foc::ShadowEpsilon);
+					addScalarFieldValue(i, j, k, surfaceThreshold + eps);
 
 					if (isWeightFieldEnabled) {
-						weightField.set(i, j, k, (float)(weightField(i, j, k) + surfaceThreshold + foc::ShadowEpsilon));
+						weightField.set(i, j, k, (float)(weightField(i, j, k) + surfaceThreshold + eps));
 					}
 				}
 			}
@@ -442,8 +443,8 @@ void ScalarField::updateBatchMinimumValues(Array3D<BatchData>& grid) {
 				for (int vk = 0; vk < b->fieldView.depth; vk++) {
 					for (int vj = 0; vj < b->fieldView.height; vj++) {
 						for (int vi = 0; vi < b->fieldView.width; vi++) {
-							if (b->fieldView.isIndexInParent(i, j, k) && b->fieldView(i, j, k) < minval) {
-								minval = b->fieldView(i, j, k);
+							if (b->fieldView.isIndexInParent(vi, vj, vk) && b->fieldView(vi, vj, vk) < minval) {
+								minval = b->fieldView(vi, vj, vk);
 							}
 						}
 					}

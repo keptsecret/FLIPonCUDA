@@ -220,7 +220,7 @@ void FluidSimulation::addMarkerParticlesToCell(Point3i idx, Vector3f vel) {
 		Point3f(c.x - q, c.y + q, c.z + q)
 	};
 
-	double jitter = 0.1; // TODO: currently, constant jitter
+	double jitter = 0.1 * 0.25 * cellsize; 	// TODO: currently, constant jitter of 0.1
 	for (int i = 0; i < 8; i++) {
 		Vector3f jit = Vector3f(randomDouble(-jitter, jitter),
 				randomDouble(-jitter, jitter),

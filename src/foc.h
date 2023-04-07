@@ -82,7 +82,7 @@ static FOC_CONST float Infinity = std::numeric_limits<float>::infinity();
 static constexpr float MachineEpsilon =
 		std::numeric_limits<float>::epsilon() * 0.5;
 #endif
-static FOC_CONST float ShadowEpsilon = 1e-8f;
+static FOC_CONST double ShadowEpsilon = 1e-8f;
 static FOC_CONST float Pi = 3.14159265358979323846;
 static FOC_CONST float InvPi = 0.31830988618379067154;
 static FOC_CONST float Inv2Pi = 0.15915494309189533577;
