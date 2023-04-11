@@ -36,7 +36,8 @@ mkdir cache
 
 ## Samples
 
-![water sphere drop](./samples/flipsphere.gif)
+https://user-images.githubusercontent.com/27181108/231271691-0bde75ca-577d-4a4f-85dc-e197733e5132.mp4
+
 *Simulated on 64x64x64 grid with cell size 0.125 for 60 frames at 30 FPS. Rendered in Blender Cycles.*
 
 ---
