@@ -29,6 +29,8 @@ public:
 	void addFluidCuboid(Point3f pmin, Point3f pmax);
 	void addFluidCuboid(double x, double y, double z, double w, double h, double d);
 
+	void addSolidCells(std::vector<Point3i>& indices);
+
 	// constant body force
 	void addBodyForce(double fx, double fy, double fz);
 	void addBodyForce(Vector3f f);

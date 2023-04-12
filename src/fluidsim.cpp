@@ -60,6 +60,7 @@ void FluidSimulation::update(double dt) {
 	isCurrentFrameFinished = false;
 
 	double timeleft = dt;
+	unsigned int stepnum = 0;
 	while (timeleft > 0.0) {
 		double timestep = getNextTimeStep();
 		if (timeleft - timestep < 0.0) {
@@ -68,6 +69,7 @@ void FluidSimulation::update(double dt) {
 		timeleft -= timestep;
 
 		stepSimulation(timestep);
+		stepnum++;
 	}
 
 	currentFrame++;
@@ -76,7 +78,8 @@ void FluidSimulation::update(double dt) {
 	// print frame times
 	auto end = std::chrono::steady_clock::now();
 	times[0] = end - start;
-	std::cout << "Frame " << currentFrame << ":: total elapsed time: " << times[0].count() << "s\n";
+	std::cout << "Frame " << currentFrame << ":: Total elapsed time: " << times[0].count() << "s\n";
+	std::cout << "\tNum sub steps: " << stepnum << "\n";
 	std::cout << "\tUpdate fluid cells: " << times[1].count() << "s\n";
 	std::cout << "\tReconstruct mesh: " << times[2].count() << "s\n";
 	std::cout << "\tAdvect velocity field: " << times[3].count() << "s\n";
@@ -100,6 +103,16 @@ void FluidSimulation::addFluidCuboid(Point3f pmin, Point3f pmax) {
 
 void FluidSimulation::addFluidCuboid(double x, double y, double z, double w, double h, double d) {
 	addFluidCuboid(Point3f(x, y, z), Point3f(x + w, y + h, z + d));
+}
+
+void FluidSimulation::addSolidCells(std::vector<Point3i>& indices) {
+	for (const auto& p : indices) {
+		if (!isGridIndexInRange(p, isize, jsize, ksize)) {
+			std::printf("Error: solid cell index out of range.\n");
+		}
+
+		materialGrid.set(p.x, p.y, p.z, Material::solid);
+	}
 }
 
 void FluidSimulation::addBodyForce(double fx, double fy, double fz) {
